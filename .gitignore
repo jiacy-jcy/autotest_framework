@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 测试与报告
+.pytest_cache/
+reports/
+
+# IDE
+.idea/
+.vscode/

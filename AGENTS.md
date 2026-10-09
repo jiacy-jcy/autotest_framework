@@ -1,0 +1,50 @@
+# AGENTS.md —— ATF 智测开发指南
+
+## 项目定位
+
+AI 加持、中文友好的 Python 接口自动化测试框架。两大差异化：**AI 用例生成** 与 **全中文体验**（报错、比较符、文档）。
+规划方向：开源积累影响力 → 内容推广 → 远期商业化。
+
+## 目录结构
+
+```
+atf/            框架核心包
+├── cli.py        命令行入口（run / gen）
+├── runner.py     执行引擎：渲染变量→发请求→提取→断言
+├── parser.py     YAML 用例加载与格式校验
+├── template.py   变量渲染（${var} 与命名空间 ${env.x} / ${sys.X}）
+├── extractor.py  响应取值（JSON 路径 / status_code / headers.x / re:正则）
+├── assertion.py  断言引擎（中英文比较符）
+├── report.py     中文控制台报告
+├── ai.py         OpenAPI→用例生成（规则引擎 + 可选 LLM 增强）
+└── errors.py     异常体系（错误信息必须中文）
+examples/       离线可跑的示例（mock_server + 用例 + openapi.json）
+tests/          框架自身测试（unittest，零额外依赖）
+```
+
+## 常用命令
+
+```bash
+python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
+.venv\Scripts\python -m unittest discover -s tests       # 跑测试
+.venv\Scripts\python examples\mock_server.py             # 启动演示接口（8899 端口）
+.venv\Scripts\atf run examples\cases\user_flow.yaml -e examples\config.yaml  # 端到端验证
+```
+
+## 开发约定（重要）
+
+- **一切面向用户的信息必须中文**：报错、CLI 帮助、报告、文档、注释
+- 控制台输出只用 GBK 安全字符（√ × ……），避免用户终端乱码
+- 依赖保持极简（当前仅 httpx + PyYAML），新增依赖需在 README 说明理由
+- 测试用 stdlib unittest（零额外依赖）；涉及 HTTP 的测试用内置 mock server（`http.server` 起随机端口），不依赖外网
+- 新特性必须同步：单测 + README 说明 + examples 示例（如适用）
+- AI 相关功能必须「无密钥可回退」，保证离线可用
+- 变量来源必须用命名空间区分：`${name}` 为用例/运行时变量，`${env.name}` 为 `--env` 配置，`${sys.NAME}` 为系统环境变量
+- 无前缀变量**禁止**回退系统环境变量（Windows 环境变量大小写不敏感，`${username}` 会静默命中系统 `USERNAME`）；只有显式 `${sys.NAME}` 才读取系统变量
+- 修改本文件涉及的任何结构/命令/约定时，同步更新本文件
+
+## 路线图（发布前检查项）
+
+- v0.2：`atf init` 脚手架、Allure 报告、pytest 插件
+- v0.3：CSV/Excel 数据驱动、插件系统
+- 发布 PyPI 前：确认包名可用并改名（pyproject.toml 中 `name`）、补 GitHub Actions CI

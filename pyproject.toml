@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+# 注意：发布 PyPI 前需确认包名可用，届时改为正式品牌名
+name = "atf"
+version = "0.1.0"
+description = "ATF 智测 —— AI 加持、中文友好的接口自动化测试框架"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = [
+    "httpx>=0.27",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+atf = "atf.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["atf*"]

@@ -1,0 +1,5 @@
+# 环境变量配置：执行时用 --env 指定，可准备 dev/test/prod 多份
+# 用例中通过命名空间引用，例如 ${env.base_url}（不会与系统环境变量冲突）
+base_url: http://127.0.0.1:8899
+username: admin
+password: "123456"
