@@ -20,6 +20,7 @@ atf/            框架核心包
 └── errors.py     异常体系（错误信息必须中文）
 examples/       离线可跑的示例（mock_server + 用例 + openapi.json）
 tests/          框架自身测试（unittest，零额外依赖）
+.github/        GitHub Actions CI（单元测试矩阵 + 端到端冒烟）
 ```
 
 ## 常用命令
@@ -47,4 +48,5 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 
 - v0.2：`atf init` 脚手架、Allure 报告、pytest 插件
 - v0.3：CSV/Excel 数据驱动、插件系统
-- 发布 PyPI 前：确认包名可用并改名（pyproject.toml 中 `name`）、补 GitHub Actions CI
+- 发布 PyPI 前：确认包名可用并改名（pyproject.toml 中 `name`）
+- 已完成：GitHub Actions CI（`.github/workflows/test.yml`：Python 3.9–3.12 单测矩阵 + 端到端冒烟）

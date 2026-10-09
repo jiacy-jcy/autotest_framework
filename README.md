@@ -1,5 +1,8 @@
 # ATF 智测
 
+[![测试](https://github.com/jiacy-jcy/autotest_framework/actions/workflows/test.yml/badge.svg)](https://github.com/jiacy-jcy/autotest_framework/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 **AI 加持、中文友好的接口自动化测试框架**（Python）
 
 零代码基础也能写接口用例：YAML 描述、全中文报错、支持中文比较符；
