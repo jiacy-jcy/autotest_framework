@@ -21,9 +21,14 @@
 
 ```bash
 pip install -e .                     # 安装（发布后改为 pip install atf）
-python examples/mock_server.py       # 终端①：启动本地演示接口（端口 8899）
-atf run examples/cases/user_flow.yaml -e examples/config.yaml   # 终端②：执行用例
+atf init myproject                   # 初始化示例项目（生成配置、用例、演示服务）
+cd myproject
+python mock_server.py                # 终端①：启动本地演示接口（端口 8899）
+atf run cases/example.yaml -e config.yaml   # 终端②：执行用例
 ```
+
+> 已有项目可直接用仓库自带的 `examples/` 体验：`python examples/mock_server.py`
+> 配合 `atf run examples/cases/user_flow.yaml -e examples/config.yaml`。
 
 输出：
 
@@ -113,6 +118,7 @@ set ATF_AI_MODEL=deepseek-chat
 
 | 命令 | 说明 |
 |------|------|
+| `atf init [目录] [--force]` | 初始化示例项目（配置 + 用例 + 演示服务） |
 | `atf run <用例文件或目录> [-e 环境配置.yaml] [-t 超时秒]` | 执行用例，全部通过退出码为 0 |
 | `atf gen <openapi.json> [-o 输出目录] [--llm]` | 生成用例 |
 | `atf --version` | 查看版本 |

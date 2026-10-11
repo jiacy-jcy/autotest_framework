@@ -9,7 +9,8 @@ AI 加持、中文友好的 Python 接口自动化测试框架。两大差异化
 
 ```
 atf/            框架核心包
-├── cli.py        命令行入口（run / gen）
+├── cli.py        命令行入口（run / gen / init）
+├── scaffold.py   atf init 脚手架（内嵌模板，零打包配置）
 ├── runner.py     执行引擎：渲染变量→发请求→提取→断言
 ├── parser.py     YAML 用例加载与格式校验
 ├── template.py   变量渲染（${var} 与命名空间 ${env.x} / ${sys.X}）
@@ -46,7 +47,7 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 
 ## 路线图（发布前检查项）
 
-- v0.2：`atf init` 脚手架、Allure 报告、pytest 插件
+- v0.2（进行中）：`atf init` 脚手架（已完成）、报告（默认自研 HTML + 可选导出 Allure）、pytest 插件
 - v0.3：CSV/Excel 数据驱动、插件系统
 - 发布 PyPI 前：确认包名可用并改名（pyproject.toml 中 `name`）
 - 已完成：GitHub Actions CI（`.github/workflows/test.yml`：Python 3.9–3.12 单测矩阵 + 端到端冒烟）

@@ -1,4 +1,4 @@
-"""命令行入口：atf run 执行用例 / atf gen 生成用例"""
+"""命令行入口：atf run 执行用例 / atf gen 生成用例 / atf init 初始化项目"""
 import argparse
 import sys
 
@@ -24,12 +24,18 @@ def main(argv=None) -> int:
     p_gen.add_argument("--llm", action="store_true",
                        help="调用大模型补充边界用例（需配置 ATF_AI_API_KEY 等环境变量）")
 
+    p_init = sub.add_parser("init", help="初始化示例项目（生成配置、用例与演示服务）")
+    p_init.add_argument("dir", nargs="?", default=".", help="目标目录，默认当前目录")
+    p_init.add_argument("--force", action="store_true", help="覆盖已存在的同名文件")
+
     args = parser.parse_args(argv)
     try:
         if args.command == "run":
             return _cmd_run(args)
         if args.command == "gen":
             return _cmd_gen(args)
+        if args.command == "init":
+            return _cmd_init(args)
     except ATFError as exc:
         print(f"错误：{exc}", file=sys.stderr)
         return 2
@@ -55,4 +61,24 @@ def _cmd_gen(args) -> int:
 
     target = generate_from_openapi(args.spec, args.output, use_llm=args.llm)
     print(f"已生成用例文件：{target}")
+    return 0
+
+
+def _cmd_init(args) -> int:
+    from .scaffold import init_project
+
+    root, created, skipped = init_project(args.dir, force=args.force)
+    print(f"√ 已初始化 ATF 项目：{root.resolve()}")
+    if created:
+        print("  已生成：")
+        for name in created:
+            print(f"    {name}")
+    if skipped:
+        print("  已存在（未覆盖，如需覆盖请加 --force）：")
+        for name in skipped:
+            print(f"    {name}")
+    print("\n下一步：")
+    print("  1. 启动演示服务：python mock_server.py")
+    print("  2. 执行示例用例：atf run cases/example.yaml -e config.yaml")
+    print("  3. 修改 config.yaml 的 base_url 指向你的接口，开始编写用例")
     return 0
