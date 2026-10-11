@@ -1,6 +1,7 @@
 """命令行入口：atf run 执行用例 / atf gen 生成用例 / atf init 初始化项目"""
 import argparse
 import sys
+from pathlib import Path
 
 from . import __version__
 from .errors import ATFError
@@ -17,6 +18,10 @@ def main(argv=None) -> int:
     p_run.add_argument("case", help="用例文件或目录路径")
     p_run.add_argument("-e", "--env", help="环境变量配置文件（YAML 键值对）")
     p_run.add_argument("-t", "--timeout", type=float, default=30.0, help="请求超时秒数，默认 30")
+    p_run.add_argument("--html", nargs="?", const="reports/atf-report.html", default=None,
+                       help="生成 HTML 报告，可指定路径（默认 reports/atf-report.html）")
+    p_run.add_argument("--allure", nargs="?", const="allure-results", default=None,
+                       help="导出 Allure 结果目录，可指定路径（默认 allure-results）")
 
     p_gen = sub.add_parser("gen", help="从 OpenAPI/Swagger 文档生成用例（--llm 可 AI 增强）")
     p_gen.add_argument("spec", help="OpenAPI/Swagger 文档路径（JSON 格式）")
@@ -53,7 +58,20 @@ def _cmd_run(args) -> int:
     suites = [runner.run_case(load_case_file(file)) for file in find_case_files(args.case)]
     for suite in suites:
         print_suite(suite)
-    return 0 if print_summary(suites) else 1
+    all_passed = print_summary(suites)
+
+    if args.html:
+        from .html_report import write_html_report
+
+        path = write_html_report(suites, args.html)
+        print(f"HTML 报告已生成：{Path(path).resolve()}")
+    if args.allure:
+        from .allure_report import write_allure_results
+
+        path = write_allure_results(suites, args.allure)
+        print(f"Allure 结果已导出：{Path(path).resolve()}"
+              f"（可执行 allure generate {path} -o allure-report 生成 HTML 报告）")
+    return 0 if all_passed else 1
 
 
 def _cmd_gen(args) -> int:

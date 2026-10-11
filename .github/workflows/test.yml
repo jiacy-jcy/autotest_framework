@@ -49,8 +49,12 @@ jobs:
           python examples/mock_server.py &
           sleep 2
 
-      - name: 执行示例用例
-        run: atf run examples/cases/user_flow.yaml -e examples/config.yaml
+      - name: 执行示例用例（并生成报告）
+        run: |
+          atf run examples/cases/user_flow.yaml -e examples/config.yaml \
+            --html reports/atf-report.html --allure allure-results
+          test -f reports/atf-report.html
+          test -f allure-results/environment.properties
 
       - name: 验证用例生成
         run: |

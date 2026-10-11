@@ -17,6 +17,8 @@ atf/            框架核心包
 ├── extractor.py  响应取值（JSON 路径 / status_code / headers.x / re:正则）
 ├── assertion.py  断言引擎（中英文比较符）
 ├── report.py     中文控制台报告
+├── html_report.py 自研单文件 HTML 报告（零依赖、内联样式）
+├── allure_report.py 导出 Allure 结果（allure-results）
 ├── ai.py         OpenAPI→用例生成（规则引擎 + 可选 LLM 增强）
 └── errors.py     异常体系（错误信息必须中文）
 examples/       离线可跑的示例（mock_server + 用例 + openapi.json）
@@ -47,7 +49,7 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 
 ## 路线图（发布前检查项）
 
-- v0.2（进行中）：`atf init` 脚手架（已完成）、报告（默认自研 HTML + 可选导出 Allure）、pytest 插件
+- v0.2（进行中）：`atf init` 脚手架（已完成）、测试报告 HTML + Allure（已完成）、pytest 插件
 - v0.3：CSV/Excel 数据驱动、插件系统
 - 发布 PyPI 前：确认包名可用并改名（pyproject.toml 中 `name`）
 - 已完成：GitHub Actions CI（`.github/workflows/test.yml`：Python 3.9–3.12 单测矩阵 + 端到端冒烟）

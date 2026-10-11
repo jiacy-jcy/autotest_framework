@@ -114,19 +114,32 @@ set ATF_AI_MODEL=deepseek-chat
 
 未配置密钥时自动回退为规则引擎，不影响使用。
 
+## 测试报告
+
+`atf run` 支持两种报告输出：
+
+```bash
+atf run cases -e config.yaml --html                  # 生成 reports/atf-report.html
+atf run cases -e config.yaml --html out/report.html  # 自定义路径
+atf run cases -e config.yaml --allure                # 导出 allure-results/
+```
+
+- **HTML 报告（默认）**：零依赖、单文件、全中文，双击即可查看；含汇总统计，逐步展示方法、接口、状态码与耗时，失败步骤自动展开请求体、响应体与失败原因
+- **Allure**：导出标准结果，供已有 Allure 的团队使用：`allure generate allure-results -o allure-report`
+
 ## 命令一览
 
 | 命令 | 说明 |
 |------|------|
 | `atf init [目录] [--force]` | 初始化示例项目（配置 + 用例 + 演示服务） |
-| `atf run <用例文件或目录> [-e 环境配置.yaml] [-t 超时秒]` | 执行用例，全部通过退出码为 0 |
+| `atf run <用例文件或目录> [-e 环境配置.yaml] [--html 路径] [--allure 目录] [-t 超时秒]` | 执行用例，可同时生成报告，全部通过退出码为 0 |
 | `atf gen <openapi.json> [-o 输出目录] [--llm]` | 生成用例 |
 | `atf --version` | 查看版本 |
 
 ## 路线图
 
-- [x] v0.1 核心引擎：YAML 用例 / 变量提取 / 中断言 / 中文报告 / AI 生成
-- [ ] v0.2 `atf init` 项目脚手架、Allure 报告、pytest 插件（融入 pytest 生态）
+- [x] v0.1 核心引擎：YAML 用例 / 变量提取 / 中英文断言 / 控制台报告 / AI 生成
+- [ ] v0.2 项目脚手架（已完成）、测试报告 HTML + Allure（已完成）、pytest 插件（进行中）
 - [ ] v0.3 数据驱动（CSV/Excel）、数据库断言插件、钩子函数
 - [ ] v0.4 AI 失败用例智能分析（自动定位是接口变更还是用例问题）
 

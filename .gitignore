@@ -8,6 +8,8 @@ venv/
 # 测试与报告
 .pytest_cache/
 reports/
+allure-results/
+allure-report/
 
 # IDE
 .idea/

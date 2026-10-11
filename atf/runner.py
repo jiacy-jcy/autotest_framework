@@ -1,4 +1,5 @@
 """执行引擎：渲染变量 → 发送请求 → 提取变量 → 断言，收集中文结果"""
+import json
 import time
 from dataclasses import dataclass, field
 
@@ -8,6 +9,19 @@ from . import assertion, extractor, template
 from .errors import AssertFailError, ATFError, CaseFormatError
 from .template import Variables
 
+_MAX_PREVIEW = 3000
+
+
+@dataclass
+class StepDetail:
+    """步骤详情，供 HTML / Allure 报告使用"""
+
+    method: str = ""
+    url: str = ""
+    status_code: int = None
+    request_body: str = ""
+    response_body: str = ""
+
 
 @dataclass
 class StepResult:
@@ -15,6 +29,8 @@ class StepResult:
     passed: bool
     elapsed: float
     error: str = ""
+    started_at: float = 0.0
+    detail: StepDetail = field(default_factory=StepDetail)
 
 
 @dataclass
@@ -23,6 +39,7 @@ class SuiteResult:
     source: str
     steps: list = field(default_factory=list)
     skipped: int = 0
+    started_at: float = 0.0
 
     @property
     def passed(self) -> bool:
@@ -48,7 +65,11 @@ class Runner:
             flat={**self.base_variables, **(config.get("variables") or {})},
             env=self.env_variables,
         )
-        suite = SuiteResult(name=config.get("name", "未命名用例"), source=case.get("__file__", ""))
+        suite = SuiteResult(
+            name=config.get("name", "未命名用例"),
+            source=case.get("__file__", ""),
+            started_at=time.time(),
+        )
         steps = case["teststeps"]
         with httpx.Client(timeout=self.timeout) as client:
             for index, step in enumerate(steps):
@@ -61,17 +82,22 @@ class Runner:
         return suite
 
     def _run_step(self, client, step, variables, config) -> StepResult:
+        detail = StepDetail()
+        started_at = time.time()
         start = time.perf_counter()
         try:
-            self._execute(client, step, variables, config)
-            return StepResult(step["name"], True, time.perf_counter() - start)
+            self._execute(client, step, variables, config, detail)
+            return StepResult(step["name"], True, time.perf_counter() - start,
+                              "", started_at, detail)
         except ATFError as exc:
-            return StepResult(step["name"], False, time.perf_counter() - start, str(exc))
+            return StepResult(step["name"], False, time.perf_counter() - start,
+                              str(exc), started_at, detail)
         except httpx.HTTPError as exc:
             return StepResult(step["name"], False, time.perf_counter() - start,
-                              f"请求发送失败：{exc}（请检查服务是否启动、网络是否连通）")
+                              f"请求发送失败：{exc}（请检查服务是否启动、网络是否连通）",
+                              started_at, detail)
 
-    def _execute(self, client, step, variables, config):
+    def _execute(self, client, step, variables, config, detail: StepDetail):
         request = template.render(step["request"], variables)
         if not isinstance(request, dict):
             raise CaseFormatError(f"步骤「{step['name']}」的 request 必须是键值对")
@@ -81,7 +107,13 @@ class Runner:
         url = join_url(base_url, str(request.pop("url", "")))
         headers = {**(config.get("headers") or {}), **(request.pop("headers", None) or {})}
 
+        detail.method = method
+        detail.url = url
+        detail.request_body = _preview_request(request)
+
         response = client.request(method, url, headers=headers, **request)
+        detail.status_code = response.status_code
+        detail.response_body = _truncate(response.text)
 
         for var_name, expression in (step.get("extract") or {}).items():
             variables.set(
@@ -104,3 +136,21 @@ class Runner:
         if not passed:
             custom = f"（{args[2]}）" if len(args) > 2 else ""
             raise AssertFailError(f"断言失败{custom}：{expression} {reason}")
+
+
+def _preview_request(request: dict) -> str:
+    if "json" in request:
+        return json.dumps(request["json"], ensure_ascii=False, indent=2)
+    if "params" in request:
+        return json.dumps(request["params"], ensure_ascii=False, indent=2)
+    if "data" in request:
+        data = request["data"]
+        return data if isinstance(data, str) else str(data)
+    return ""
+
+
+def _truncate(text: str, limit: int = _MAX_PREVIEW) -> str:
+    text = text or ""
+    if len(text) <= limit:
+        return text
+    return text[:limit] + "\n……（内容过长，已截断）"
