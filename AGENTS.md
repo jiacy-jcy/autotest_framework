@@ -20,10 +20,12 @@ atf/            框架核心包
 ├── html_report.py 自研单文件 HTML 报告（零依赖、内联样式）
 ├── allure_report.py 导出 Allure 结果（allure-results）
 ├── ai.py         OpenAPI→用例生成（规则引擎 + 可选 LLM 增强）
+├── pytest_plugin.py pytest 插件（YAML 用例接入 pytest，entry point pytest11）
 └── errors.py     异常体系（错误信息必须中文）
 examples/       离线可跑的示例（mock_server + 用例 + openapi.json）
 tests/          框架自身测试（unittest，零额外依赖）
-.github/        GitHub Actions CI（单元测试矩阵 + 端到端冒烟）
+pytest_tests/   pytest 插件测试（依赖 pytest，用 pytester 隔离运行）
+.github/        GitHub Actions CI（单元测试矩阵 + pytest 插件 + 端到端冒烟）
 ```
 
 ## 常用命令
@@ -49,7 +51,8 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 
 ## 路线图（发布前检查项）
 
-- v0.2（进行中）：`atf init` 脚手架（已完成）、测试报告 HTML + Allure（已完成）、pytest 插件
+- v0.2（已完成，0.2.0）：`atf init` 脚手架、测试报告 HTML + Allure、pytest 插件
 - v0.3：CSV/Excel 数据驱动、插件系统
+- 开发约定补充：pytest 插件测试放 `pytest_tests/`（用 pytester），勿放 `tests/`（后者由 unittest 收集，不依赖 pytest）
 - 发布 PyPI 前：确认包名可用并改名（pyproject.toml 中 `name`）
 - 已完成：GitHub Actions CI（`.github/workflows/test.yml`：Python 3.9–3.12 单测矩阵 + 端到端冒烟）

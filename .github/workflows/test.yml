@@ -30,6 +30,23 @@ jobs:
       - name: 运行单元测试
         run: python -m unittest discover -s tests -v
 
+  pytest-plugin:
+    name: pytest 插件
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安装框架与 pytest
+        run: pip install -e ".[pytest]"
+
+      - name: 运行插件测试
+        run: pytest pytest_tests -v
+
   smoke:
     name: 端到端冒烟（示例流程）
     runs-on: ubuntu-latest

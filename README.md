@@ -15,7 +15,9 @@
 - **AI 加持**：`atf gen` 从 OpenAPI/Swagger 生成用例，`--llm` 调用大模型补充边界用例
 - **流程编排**：变量提取与传递（`extract`），轻松实现「登录 → 携带令牌访问」
 - **数据驱动**：`${变量}` 占位符贯穿请求、断言，支持环境变量与 `--env` 配置文件
-- **开箱即用**：`pip install` 即可，自带离线演示服务，5 分钟跑通
+- **测试报告**：`--html` 零依赖单文件 HTML 报告，`--allure` 导出 Allure 结果
+- **pytest 集成**：`pip install atf[pytest]` 后，YAML 用例可直接在 pytest 中运行
+- **开箱即用**：`atf init` 一键生成项目，自带离线演示服务，5 分钟跑通
 
 ## 快速开始
 
@@ -127,6 +129,21 @@ atf run cases -e config.yaml --allure                # 导出 allure-results/
 - **HTML 报告（默认）**：零依赖、单文件、全中文，双击即可查看；含汇总统计，逐步展示方法、接口、状态码与耗时，失败步骤自动展开请求体、响应体与失败原因
 - **Allure**：导出标准结果，供已有 Allure 的团队使用：`allure generate allure-results -o allure-report`
 
+## 在 pytest 中使用
+
+安装 `pytest` 增强后，ATF 会通过 entry point 自动注册为 pytest 插件，
+带有 `teststeps` 的 YAML 会被收集为 pytest 用例，从而复用 pytest 的 `-k` 选择、报告与 CI 生态：
+
+```bash
+pip install atf[pytest]
+pytest cases -v --atf-env config.yaml   # 像跑普通测试一样运行 ATF 用例
+pytest cases -k 登录                      # 用 -k 选择用例
+```
+
+- `--atf-env`：指定环境变量配置（等同于 `atf run -e`）
+- `--atf-timeout`：请求超时秒数
+- 非 ATF 结构的 YAML 不会被收集，可与其他工具共存
+
 ## 命令一览
 
 | 命令 | 说明 |
@@ -139,7 +156,7 @@ atf run cases -e config.yaml --allure                # 导出 allure-results/
 ## 路线图
 
 - [x] v0.1 核心引擎：YAML 用例 / 变量提取 / 中英文断言 / 控制台报告 / AI 生成
-- [ ] v0.2 项目脚手架（已完成）、测试报告 HTML + Allure（已完成）、pytest 插件（进行中）
+- [x] v0.2 项目脚手架、测试报告 HTML + Allure、pytest 插件
 - [ ] v0.3 数据驱动（CSV/Excel）、数据库断言插件、钩子函数
 - [ ] v0.4 AI 失败用例智能分析（自动定位是接口变更还是用例问题）
 
