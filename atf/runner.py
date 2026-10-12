@@ -7,7 +7,7 @@ from pathlib import Path
 
 import httpx
 
-from . import assertion, extractor, template
+from . import assertion, extractor, plugins, template
 from .errors import AssertFailError, ATFError, CaseFormatError
 from .hooks import HookContext, load_hooks
 from .template import Variables
@@ -117,6 +117,7 @@ class Runner:
             started_at=time.time(),
         )
         steps = case["teststeps"]
+        plugins.load_plugins(config, self._hook_search_dirs(case))
         hooks = load_hooks(config, self._hook_search_dirs(case))
         ctx = HookContext(variables=variables, config=config, case=case)
         self._call_hook(hooks.get("before_case"), ctx, "before_case")

@@ -16,6 +16,7 @@
 - **流程编排**：变量提取与传递（`extract`），轻松实现「登录 → 携带令牌访问」
 - **数据驱动**：`${变量}` 占位符贯穿请求、断言；支持 `--env` 环境配置与 CSV/Excel 参数化
 - **数据库与钩子**：`db` 步骤直接校验数据库（SQLite 内置，MySQL/PostgreSQL 可选）；生命周期钩子可注入自定义逻辑
+- **可扩展**：插件机制可注册自定义比较符与提取器
 - **执行增强**：套件编排、标签选择、并发执行（`-w`）、失败重试（`--retry`）
 - **测试报告**：`--html` 零依赖单文件 HTML 报告，`--allure` 导出 Allure 结果
 - **pytest 集成**：`pip install atf[pytest]` 后，YAML 用例可直接在 pytest 中运行
@@ -212,6 +213,39 @@ def after_step(context):
 - 框架会自动把「当前工作目录」与「用例文件所在目录」加入模块搜索路径
 - 钩子出错会转为中文错误：`before_step` 出错会导致该步骤失败；`after_step` 出错会把本已通过的步骤判为失败
 
+## 插件系统
+
+通过插件可注册**自定义比较符**与**自定义提取器**：
+
+```python
+# myplugin.py
+def register(registry):
+    registry.register_comparator("约等于", lambda a, b: abs(float(a) - float(b)) <= 0.01, "数值近似相等")
+    registry.register_extractor("文本长度", lambda result, rest: len(result.text))
+```
+
+用例中按模块名引用即可使用：
+
+```yaml
+config:
+  name: 插件示例
+  plugins:
+    - myplugin
+
+teststeps:
+  - name: 登录
+    request: {method: POST, url: /api/login, json: {username: ${env.username}, password: ${env.password}}}
+    extract:
+      body_len: "文本长度:"          # 自定义提取器：前缀 "文本长度:"
+    validate:
+      - 约等于: [$.code, 0.005]      # 自定义比较符
+      - gt: ["${body_len}", 0]
+```
+
+- **用例级**：`config.plugins` 列出模块名（模块需提供 `register(registry)` 函数）
+- **生态级**：第三方包可通过 entry point 组 `atf.plugins` 声明，安装后自动加载
+- 自定义比较符与内置比较符同等使用；自定义提取器以前缀 `名称:` 引用
+
 ## AI 生成用例
 
 ```bash
@@ -294,7 +328,7 @@ pytest cases -k 登录                      # 用 -k 选择用例
 - [x] v0.2 项目脚手架、测试报告 HTML + Allure、pytest 插件
 - [x] v0.3 数据驱动（CSV/Excel）、数据库断言、钩子函数
 - [x] v0.4 AI 失败用例智能分析（自动定位是接口变更还是用例问题）
-- [ ] v0.5 执行增强（套件/标签/并发/重试，已完成）、插件系统（进行中）
+- [x] v0.5 执行增强（套件/标签/并发/重试）、插件系统
 
 ## 参与贡献
 

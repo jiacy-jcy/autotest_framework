@@ -2,6 +2,7 @@
 import operator
 import re
 
+from . import plugins
 from .errors import ATFError
 
 
@@ -55,7 +56,17 @@ ALIASES = {
 
 def compare(comparator: str, actual, expected) -> tuple:
     """执行一次比较，返回 (是否通过, 失败原因)"""
+    plugins.ensure_loaded()
     name = ALIASES.get(comparator, comparator)
+    if name in plugins.registry.comparators:
+        func, desc = plugins.registry.comparators[name]
+        try:
+            passed = bool(func(actual, expected))
+        except (TypeError, ValueError):
+            passed = False
+        if passed:
+            return True, ""
+        return False, f"期望{desc or name} {expected!r}，实际为 {actual!r}"
     if name not in COMPARATORS:
         available = "、".join(list(COMPARATORS) + list(ALIASES))
         raise ATFError(f"不支持的比较符：{comparator}，可用：{available}")

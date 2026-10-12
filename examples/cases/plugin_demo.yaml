@@ -1,0 +1,22 @@
+# 插件示例：插件定义在同目录的 plugins_demo.py（提供 register 函数）
+config:
+  name: 插件示例
+  base_url: ${env.base_url}
+  tags: [plugin]
+  plugins:
+    - plugins_demo
+
+teststeps:
+  - name: 登录
+    request:
+      method: POST
+      url: /api/login
+      json:
+        username: ${env.username}
+        password: ${env.password}
+    extract:
+      body_len: "文本长度:"          # 自定义提取器：取响应文本长度
+    validate:
+      - eq: [$.code, 0]
+      - 约等于: [$.code, 0.005]      # 自定义比较符
+      - gt: ["${body_len}", 0]

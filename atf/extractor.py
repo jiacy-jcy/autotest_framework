@@ -4,6 +4,7 @@ import re
 
 import httpx
 
+from . import plugins
 from .errors import ExtractError
 
 
@@ -18,6 +19,10 @@ def extract_value(response: httpx.Response, expression):
     """
     if not isinstance(expression, str):
         return expression
+    plugins.ensure_loaded()
+    prefix, sep, rest = expression.partition(":")
+    if sep and prefix in plugins.registry.extractors:
+        return plugins.registry.extractors[prefix](response, rest)
     if expression == "status_code":
         return response.status_code
     if expression.startswith("headers."):
