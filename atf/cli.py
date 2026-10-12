@@ -22,6 +22,8 @@ def main(argv=None) -> int:
                        help="生成 HTML 报告，可指定路径（默认 reports/atf-report.html）")
     p_run.add_argument("--allure", nargs="?", const="allure-results", default=None,
                        help="导出 Allure 结果目录，可指定路径（默认 allure-results）")
+    p_run.add_argument("--ai-analyze", action="store_true",
+                       help="失败时分析原因（配置 ATF_AI_API_KEY 则用大模型，否则给出规则判断）")
 
     p_gen = sub.add_parser("gen", help="从 OpenAPI/Swagger 文档生成用例（--llm 可 AI 增强）")
     p_gen.add_argument("spec", help="OpenAPI/Swagger 文档路径（JSON 格式）")
@@ -62,10 +64,17 @@ def _cmd_run(args) -> int:
         print_suite(suite)
     all_passed = print_summary(suites)
 
+    analyses = None
+    if getattr(args, "ai_analyze", False):
+        from .analyze import analyze_failures, print_analysis
+
+        analyses = analyze_failures(suites)
+        print_analysis(analyses)
+
     if args.html:
         from .html_report import write_html_report
 
-        path = write_html_report(suites, args.html)
+        path = write_html_report(suites, args.html, analyses=analyses)
         print(f"HTML 报告已生成：{Path(path).resolve()}")
     if args.allure:
         from .allure_report import write_allure_results

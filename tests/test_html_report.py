@@ -2,6 +2,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from atf.analyze import FailureAnalysis
 from atf.html_report import write_html_report
 from atf.runner import StepDetail, StepResult, SuiteResult
 
@@ -50,6 +51,18 @@ class TestHtmlReport(unittest.TestCase):
         ).read_text(encoding="utf-8")
         self.assertIn("通过率", content)
         self.assertIn("断言失败", content)
+
+    def test_renders_analysis_section(self):
+        analysis = FailureAnalysis(
+            suite="失败用例", step="查询", method="GET", url="http://x/api/users/1",
+            status_code=200, error="x", category="接口变更",
+            reason="响应结构可能变化", suggestion="核对字段", source="AI",
+        )
+        content = write_html_report([_failing_suite()], self.dir / "r.html",
+                                    analyses=[analysis]).read_text(encoding="utf-8")
+        self.assertIn("失败分析", content)
+        self.assertIn("接口变更", content)
+        self.assertIn("核对字段", content)
 
     def test_escapes_special_characters(self):
         content = write_html_report([_failing_suite()], self.dir / "r.html").read_text(encoding="utf-8")

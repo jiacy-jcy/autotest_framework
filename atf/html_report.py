@@ -41,21 +41,36 @@ th { color: #6b7686; font-weight: 600; font-size: 12px; background: #fafbfc; }
 pre { margin: 0; background: #1f2733; color: #e6edf3; padding: 12px 14px; border-radius: 8px;
   overflow: auto; font-size: 12px; line-height: 1.5; max-height: 320px; white-space: pre-wrap; word-break: break-all; }
 .error { color: #c0392b; background: #fdecea; padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-top: 8px; }
+.analysis { background: #fff; border-radius: 10px; padding: 16px 18px; margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06); border-left: 4px solid #7b61ff; }
+.analysis h2 { margin: 0 0 8px; font-size: 16px; }
+.analysis-item { padding: 10px 0; border-top: 1px solid #eef1f5; }
+.analysis-item:first-of-type { border-top: none; }
+.analysis-head { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
+.analysis-body { color: #4a5568; font-size: 13px; margin-top: 4px; line-height: 1.6; }
+.cat { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 12px; color: #fff; background: #6b7686; white-space: nowrap; }
+.cat.api { background: #e5484d; } .cat.case { background: #b08900; } .cat.env { background: #3b6fd4; }
+.cat.auth { background: #8250df; } .cat.server { background: #c0392b; } .cat.unknown { background: #8a94a3; }
 footer { text-align: center; color: #8a94a3; font-size: 12px; margin-top: 30px; }
 """
 
+_CATEGORY_CLASS = {
+    "接口变更": "api", "用例问题": "case", "环境问题": "env",
+    "认证问题": "auth", "服务端异常": "server", "未知": "unknown",
+}
 
-def write_html_report(suites: list, path="reports/atf-report.html") -> Path:
-    """生成 HTML 报告文件，返回文件路径"""
+
+def write_html_report(suites: list, path="reports/atf-report.html", analyses: list = None) -> Path:
+    """生成 HTML 报告文件，返回文件路径。analyses 为失败分析结果（可选）"""
     target = Path(path)
     if target.suffix.lower() not in (".html", ".htm"):
         target = target / "atf-report.html"
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(_render(suites), encoding="utf-8")
+    target.write_text(_render(suites, analyses), encoding="utf-8")
     return target
 
 
-def _render(suites: list) -> str:
+def _render(suites: list, analyses: list = None) -> str:
     stats = _stats(suites)
     cards = "\n".join(_suite_card(suite) for suite in suites) or '<p>没有可展示的用例。</p>'
     return (
@@ -64,9 +79,28 @@ def _render(suites: list) -> str:
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         "<title>ATF 智测 · 测试报告</title>\n"
         f"<style>{_CSS}</style>\n</head>\n<body>\n<div class=\"container\">\n"
-        f"{_header()}\n{_summary(stats)}\n{cards}\n{_footer()}\n"
+        f"{_header()}\n{_summary(stats)}\n{_analysis_section(analyses)}\n{cards}\n{_footer()}\n"
         "</div>\n</body>\n</html>\n"
     )
+
+
+def _analysis_section(analyses: list) -> str:
+    if not analyses:
+        return ""
+    items = []
+    for item in analyses:
+        css_class = _CATEGORY_CLASS.get(item.category, "unknown")
+        target = f"{item.method} {item.url}".strip()
+        items.append(
+            '<div class="analysis-item">'
+            f'<div class="analysis-head"><span>{html.escape(item.suite)} / {html.escape(item.step)}'
+            f'<span class="mono">　{html.escape(target)}</span></span>'
+            f'<span class="cat {css_class}">{html.escape(item.category)}</span></div>'
+            f'<div class="analysis-body">原因：{html.escape(item.reason)}<br>'
+            f'建议：{html.escape(item.suggestion)}（来源：{html.escape(item.source)}）</div>'
+            "</div>"
+        )
+    return '<section class="analysis"><h2>失败分析</h2>' + "".join(items) + "</section>"
 
 
 def _header() -> str:

@@ -23,6 +23,7 @@ atf/            框架核心包
 ├── html_report.py 自研单文件 HTML 报告（零依赖、内联样式）
 ├── allure_report.py 导出 Allure 结果（allure-results）
 ├── ai.py         OpenAPI→用例生成（规则引擎 + 可选 LLM 增强）
+├── analyze.py    失败分析（规则分类 + 可选 LLM 精修）
 ├── pytest_plugin.py pytest 插件（YAML 用例接入 pytest，entry point pytest11）
 └── errors.py     异常体系（错误信息必须中文）
 examples/       离线可跑的示例（mock_server + 用例 + openapi.json）
@@ -58,6 +59,7 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 
 - v0.2（已完成，0.2.0）：`atf init` 脚手架、测试报告 HTML + Allure、pytest 插件
 - v0.3（已完成，0.3.0）：CSV/Excel 数据驱动、数据库断言、钩子函数
+- v0.4（已完成，0.4.0）：AI 失败分析（`atf run --ai-analyze`，规则分类 + LLM 精修）
 - 开发约定补充：pytest 插件测试放 `pytest_tests/`（用 pytester），勿放 `tests/`（后者由 unittest 收集，不依赖 pytest）
 - 钩子事件：before_case / after_case / before_step / after_step；钩子文件会自动从「当前目录 + 用例目录」导入
 - 发布 PyPI 前：确认包名可用并改名（pyproject.toml 中 `name`）
