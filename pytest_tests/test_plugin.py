@@ -53,6 +53,35 @@ def test_ignores_non_atf_yaml(pytester):
     assert "collected 0 items" in result.stdout.str()
 
 
+def test_tags_filter_collects_matching_only(pytester):
+    pytester.makefile(".yaml", tagged=textwrap.dedent("""
+        config:
+          name: 带标签用例
+          tags: [smoke]
+        teststeps:
+          - name: 步骤
+            db:
+              url: "sqlite:///:memory:"
+              query: "SELECT 1 AS x"
+            validate:
+              - eq: ["$[0].x", 1]
+    """))
+    pytester.makefile(".yaml", other=textwrap.dedent("""
+        config:
+          name: 普通用例
+        teststeps:
+          - name: 步骤
+            db:
+              url: "sqlite:///:memory:"
+              query: "SELECT 1 AS x"
+            validate:
+              - eq: ["$[0].x", 1]
+    """))
+    result = pytester.runpytest("--atf-tags", "smoke", "-v")
+    result.assert_outcomes(passed=1)
+    result.stdout.fnmatch_lines(["*带标签用例*"])
+
+
 def test_data_driven_parametrization(pytester, mock_server):
     pytester.makefile(
         ".csv",

@@ -1,0 +1,5 @@
+# 用例套件：按顺序组织多个用例文件（路径相对本文件所在目录）
+name: 冒烟套件
+cases:
+  - cases/user_flow.yaml
+  - cases/login_datas.yaml

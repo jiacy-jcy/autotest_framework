@@ -3,7 +3,8 @@ import unittest
 from pathlib import Path
 
 from atf.errors import CaseFormatError
-from atf.parser import find_case_files, load_case_file, load_env_file
+from atf.parser import (case_tags, find_case_files, load_case_file, load_env_file,
+                        resolve_case_files)
 
 
 class TestParser(unittest.TestCase):
@@ -40,6 +41,23 @@ class TestParser(unittest.TestCase):
         self._write("b.yml", "teststeps: []\n")
         self._write("c.txt", "不是用例\n")
         self.assertEqual(len(find_case_files(self.dir)), 2)
+
+    def test_resolve_suite_expands_cases(self):
+        self._write("a.yaml", "teststeps:\n  - request:\n      url: /a\n")
+        self._write("b.yaml", "teststeps:\n  - request:\n      url: /b\n")
+        suite = self._write("suite.yaml", "name: 套件\ncases:\n  - a.yaml\n  - b.yaml\n")
+        files = resolve_case_files(suite)
+        self.assertEqual([f.name for f in files], ["a.yaml", "b.yaml"])
+
+    def test_resolve_suite_missing_case_error(self):
+        suite = self._write("suite.yaml", "cases:\n  - nope.yaml\n")
+        with self.assertRaises(CaseFormatError):
+            resolve_case_files(suite)
+
+    def test_case_tags(self):
+        self.assertEqual(case_tags({"config": {"tags": ["smoke", "user"]}}), ["smoke", "user"])
+        self.assertEqual(case_tags({"tags": "a, b"}), ["a", "b"])
+        self.assertEqual(case_tags({}), [])
 
 
 if __name__ == "__main__":

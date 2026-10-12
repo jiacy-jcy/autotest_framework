@@ -16,6 +16,7 @@
 - **流程编排**：变量提取与传递（`extract`），轻松实现「登录 → 携带令牌访问」
 - **数据驱动**：`${变量}` 占位符贯穿请求、断言；支持 `--env` 环境配置与 CSV/Excel 参数化
 - **数据库与钩子**：`db` 步骤直接校验数据库（SQLite 内置，MySQL/PostgreSQL 可选）；生命周期钩子可注入自定义逻辑
+- **执行增强**：套件编排、标签选择、并发执行（`-w`）、失败重试（`--retry`）
 - **测试报告**：`--html` 零依赖单文件 HTML 报告，`--allure` 导出 Allure 结果
 - **pytest 集成**：`pip install atf[pytest]` 后，YAML 用例可直接在 pytest 中运行
 - **开箱即用**：`atf init` 一键生成项目，自带离线演示服务，5 分钟跑通
@@ -134,6 +135,29 @@ case_name,username,password,expect_code
 
 > 小贴士：在 YAML 的**流式序列**（`[a, b]`）中引用 `${变量}` 时，`{` 会被误认为映射起点，
 > 需写成 `[$.code, "${expect_code}"]`。改用块状写法（`- eq:` 换行后 `- $.code` / `- ${expect_code}`）则无需引号。
+
+## 用例组织与执行
+
+**套件**：用一个 YAML 按顺序组织多个用例（含 `cases` 列表、且无 `teststeps` 的文件即视为套件）：
+
+```yaml
+# smoke_suite.yaml
+name: 冒烟套件
+cases:
+  - cases/user_flow.yaml
+  - cases/login_datas.yaml
+```
+
+```bash
+atf run smoke_suite.yaml -e config.yaml   # 运行套件
+atf run cases --tags smoke                # 按标签选择用例
+atf run smoke_suite.yaml -w 4             # 并发执行（标准库多线程，零依赖）
+atf run cases --retry 2                   # 失败用例重试 2 次
+```
+
+- **标签**：在 `config.tags` 声明（列表或逗号分隔字符串），用 `--tags smoke,login` 选择
+- **并发**：`-w/--workers N` 按用例并发；同一用例内的步骤仍按顺序执行
+- **重试**：`--retry N` 对失败用例整例重跑，控制台报告会标注重试次数
 
 ## 数据库断言
 
@@ -260,7 +284,7 @@ pytest cases -k 登录                      # 用 -k 选择用例
 | 命令 | 说明 |
 |------|------|
 | `atf init [目录] [--force]` | 初始化示例项目（配置 + 用例 + 演示服务） |
-| `atf run <用例文件或目录> [-e 环境配置.yaml] [--html 路径] [--allure 目录] [--ai-analyze] [-t 超时秒]` | 执行用例，可生成报告并分析失败，全部通过退出码为 0 |
+| `atf run <用例/目录/套件> [-e 环境配置.yaml] [--tags 标签] [-w 并发数] [--retry 次数] [--html 路径] [--allure 目录] [--ai-analyze]` | 执行用例（支持套件/标签/并发/重试与报告），全部通过退出码为 0 |
 | `atf gen <openapi.json> [-o 输出目录] [--llm]` | 生成用例 |
 | `atf --version` | 查看版本 |
 
@@ -270,6 +294,7 @@ pytest cases -k 登录                      # 用 -k 选择用例
 - [x] v0.2 项目脚手架、测试报告 HTML + Allure、pytest 插件
 - [x] v0.3 数据驱动（CSV/Excel）、数据库断言、钩子函数
 - [x] v0.4 AI 失败用例智能分析（自动定位是接口变更还是用例问题）
+- [ ] v0.5 执行增强（套件/标签/并发/重试，已完成）、插件系统（进行中）
 
 ## 参与贡献
 

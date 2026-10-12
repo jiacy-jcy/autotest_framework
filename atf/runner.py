@@ -43,6 +43,7 @@ class SuiteResult:
     steps: list = field(default_factory=list)
     skipped: int = 0
     started_at: float = 0.0
+    attempts: int = 1
 
     @property
     def passed(self) -> bool:
@@ -56,17 +57,30 @@ def join_url(base_url: str, url: str) -> str:
 
 
 class Runner:
-    def __init__(self, variables: dict = None, env: dict = None, timeout: float = 30.0):
+    def __init__(self, variables: dict = None, env: dict = None, timeout: float = 30.0,
+                 retry: int = 0):
         # variables：无前缀基础变量；env：--env 配置文件变量（命名空间 env）
         self.base_variables = dict(variables or {})
         self.env_variables = dict(env or {})
         self.timeout = timeout
+        self.retry = max(0, int(retry or 0))
+
+    def run_cases(self, cases: list, workers: int = 1) -> list:
+        """执行一批用例，可按 workers 并发（标准库多线程）；返回按用例顺序展开的结果"""
+        if workers and workers > 1 and len(cases) > 1:
+            from concurrent.futures import ThreadPoolExecutor
+
+            with ThreadPoolExecutor(max_workers=workers) as pool:
+                groups = list(pool.map(self.run_case_all, cases))
+        else:
+            groups = [self.run_case_all(case) for case in cases]
+        return [suite for group in groups for suite in group]
 
     def run_case_all(self, case: dict) -> list:
         """执行用例：若 config.datas 指定了数据源，则按行展开为多次执行"""
         datas = (case.get("config") or {}).get("datas")
         if not datas:
-            return [self.run_case(case)]
+            return [self._run_with_retry(case)]
         if isinstance(datas, list):
             rows = datas
         else:
@@ -76,8 +90,17 @@ class Runner:
         results = []
         for index, row in enumerate(rows, 1):
             suffix = str(row.get("case_name") or row.get("用例名") or f"第{index}行")
-            results.append(self.run_case(case, row=row, name_suffix=suffix))
+            results.append(self._run_with_retry(case, row=row, name_suffix=suffix))
         return results
+
+    def _run_with_retry(self, case: dict, row: dict = None, name_suffix: str = None) -> SuiteResult:
+        suite = None
+        for attempt in range(1, self.retry + 2):
+            suite = self.run_case(case, row=row, name_suffix=name_suffix)
+            suite.attempts = attempt
+            if suite.passed:
+                break
+        return suite
 
     def run_case(self, case: dict, row: dict = None, name_suffix: str = None) -> SuiteResult:
         config = case.get("config") or {}

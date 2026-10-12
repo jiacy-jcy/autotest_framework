@@ -3,7 +3,8 @@ from .runner import SuiteResult
 
 
 def print_suite(suite: SuiteResult):
-    print(f"\n【用例集】{suite.name}（{suite.source}）")
+    retry_note = f"（经 {suite.attempts} 次尝试）" if suite.attempts > 1 else ""
+    print(f"\n【用例集】{suite.name}{retry_note}（{suite.source}）")
     for step in suite.steps:
         mark = "√" if step.passed else "×"
         status = "通过" if step.passed else "失败"

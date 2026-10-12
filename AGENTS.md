@@ -60,6 +60,7 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 - v0.2（已完成，0.2.0）：`atf init` 脚手架、测试报告 HTML + Allure、pytest 插件
 - v0.3（已完成，0.3.0）：CSV/Excel 数据驱动、数据库断言、钩子函数
 - v0.4（已完成，0.4.0）：AI 失败分析（`atf run --ai-analyze`，规则分类 + LLM 精修）
+- v0.5（进行中）：执行增强（套件/标签/`-w` 并发/`--retry` 重试，已完成）、插件系统
 - 开发约定补充：pytest 插件测试放 `pytest_tests/`（用 pytester），勿放 `tests/`（后者由 unittest 收集，不依赖 pytest）
 - 钩子事件：before_case / after_case / before_step / after_step；钩子文件会自动从「当前目录 + 用例目录」导入
 - 发布 PyPI 前：确认包名可用并改名（pyproject.toml 中 `name`）

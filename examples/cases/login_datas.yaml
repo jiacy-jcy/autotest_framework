@@ -2,6 +2,7 @@
 config:
   name: 登录参数化
   base_url: ${env.base_url}
+  tags: [smoke, login]
   datas: login_data.csv
 
 teststeps:

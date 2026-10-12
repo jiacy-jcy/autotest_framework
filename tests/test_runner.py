@@ -5,7 +5,7 @@ import unittest
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
-from atf.runner import Runner
+from atf.runner import Runner, StepResult, SuiteResult
 
 
 class _Handler(BaseHTTPRequestHandler):
@@ -89,6 +89,43 @@ class TestRunner(unittest.TestCase):
         # 若 token 提取或传递失败，第二步查询会返回 401 导致断言失败
         suite = Runner().run_case(self._case([{"eq": ["status_code", 200]}]))
         self.assertTrue(all(step.passed for step in suite.steps))
+
+    def _fake_result(self, passed, error=""):
+        return SuiteResult("用例", "src", [StepResult("步骤", passed, 0.01, error)], 0, 0.0)
+
+    def test_retry_succeeds_on_second_attempt(self):
+        runner = Runner(retry=2)
+        calls = {"n": 0}
+
+        def fake_run_case(case, row=None, name_suffix=None):
+            calls["n"] += 1
+            return self._fake_result(passed=calls["n"] >= 2)
+
+        runner.run_case = fake_run_case
+        suite = runner._run_with_retry({"config": {}})
+        self.assertTrue(suite.passed)
+        self.assertEqual(suite.attempts, 2)
+        self.assertEqual(calls["n"], 2)
+
+    def test_retry_exhausted_returns_last_failure(self):
+        runner = Runner(retry=1)
+        calls = {"n": 0}
+
+        def fake_run_case(case, row=None, name_suffix=None):
+            calls["n"] += 1
+            return self._fake_result(passed=False, error="断言失败")
+
+        runner.run_case = fake_run_case
+        suite = runner._run_with_retry({"config": {}})
+        self.assertFalse(suite.passed)
+        self.assertEqual(suite.attempts, 2)  # 首次 + 1 次重试
+        self.assertEqual(calls["n"], 2)
+
+    def test_run_cases_workers_preserve_order(self):
+        cases = [self._case([{"eq": ["$.code", 0]}]) for _ in range(3)]
+        suites = Runner().run_cases(cases, workers=3)
+        self.assertEqual(len(suites), 3)
+        self.assertTrue(all(suite.passed for suite in suites))
 
     def test_data_driven_runs_once_per_row(self):
         base_url = f"http://127.0.0.1:{self.port}"

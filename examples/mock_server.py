@@ -1,6 +1,6 @@
 """本地演示接口服务，用于离线体验框架：python examples/mock_server.py"""
 import json
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 USERS = {1: {"id": 1, "name": "张三", "role": "admin"}}
 VALID_TOKEN = "token-demo-001"
@@ -67,6 +67,6 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    server = HTTPServer(("127.0.0.1", 8899), Handler)
+    server = ThreadingHTTPServer(("127.0.0.1", 8899), Handler)
     print("演示服务已启动：http://127.0.0.1:8899 （按 Ctrl+C 停止）")
     server.serve_forever()

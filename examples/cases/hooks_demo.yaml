@@ -2,6 +2,7 @@
 config:
   name: 钩子示例
   base_url: ${env.base_url}
+  tags: [hooks]
   hooks:
     before_case: hooks.before_case
     before_step: hooks.before_step

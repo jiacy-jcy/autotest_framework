@@ -24,6 +24,9 @@ def main(argv=None) -> int:
                        help="导出 Allure 结果目录，可指定路径（默认 allure-results）")
     p_run.add_argument("--ai-analyze", action="store_true",
                        help="失败时分析原因（配置 ATF_AI_API_KEY 则用大模型，否则给出规则判断）")
+    p_run.add_argument("--tags", help="仅运行包含指定标签的用例，多个用逗号分隔，如 smoke,login")
+    p_run.add_argument("-w", "--workers", type=int, default=1, help="并发执行的用例数，默认 1（顺序执行）")
+    p_run.add_argument("--retry", type=int, default=0, help="失败用例重试次数，默认 0")
 
     p_gen = sub.add_parser("gen", help="从 OpenAPI/Swagger 文档生成用例（--llm 可 AI 增强）")
     p_gen.add_argument("spec", help="OpenAPI/Swagger 文档路径（JSON 格式）")
@@ -51,15 +54,25 @@ def main(argv=None) -> int:
 
 
 def _cmd_run(args) -> int:
-    from .parser import find_case_files, load_case_file, load_env_file
+    from .parser import case_tags, load_case_file, load_env_file, resolve_case_files
     from .report import print_suite, print_summary
     from .runner import Runner
 
     env = load_env_file(args.env) if args.env else {}
-    runner = Runner(env=env, timeout=args.timeout)
-    suites = []
-    for file in find_case_files(args.case):
-        suites.extend(runner.run_case_all(load_case_file(file)))
+    tag_filter = _parse_tags(getattr(args, "tags", None))
+
+    cases = []
+    for file in resolve_case_files(args.case):
+        case = load_case_file(file)
+        if tag_filter and not tag_filter.intersection(case_tags(case)):
+            continue
+        cases.append(case)
+    if not cases:
+        print("没有匹配的用例（请检查路径与 --tags 标签过滤）")
+        return 0
+
+    runner = Runner(env=env, timeout=args.timeout, retry=args.retry)
+    suites = runner.run_cases(cases, workers=args.workers)
     for suite in suites:
         print_suite(suite)
     all_passed = print_summary(suites)
@@ -83,6 +96,12 @@ def _cmd_run(args) -> int:
         print(f"Allure 结果已导出：{Path(path).resolve()}"
               f"（可执行 allure generate {path} -o allure-report 生成 HTML 报告）")
     return 0 if all_passed else 1
+
+
+def _parse_tags(value) -> set:
+    if not value:
+        return set()
+    return {item.strip() for item in str(value).split(",") if item.strip()}
 
 
 def _cmd_gen(args) -> int:

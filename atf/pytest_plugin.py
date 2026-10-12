@@ -8,7 +8,7 @@ import yaml
 import pytest
 
 from .errors import CaseFormatError
-from .parser import load_case_file, load_env_file
+from .parser import case_tags, load_case_file, load_env_file
 from .runner import Runner
 
 
@@ -18,6 +18,8 @@ def pytest_addoption(parser):
                     help="ATF 环境变量配置文件（YAML 键值对），命名空间为 env")
     group.addoption("--atf-timeout", action="store", type=float, default=30.0,
                     help="ATF 请求超时秒数（默认 30）")
+    group.addoption("--atf-tags", action="store", default=None,
+                    help="仅收集包含指定标签的用例，多个用逗号分隔")
 
 
 def pytest_configure(config):
@@ -29,6 +31,8 @@ def pytest_configure(config):
             config._atf_env = load_env_file(env_file)
         except CaseFormatError as exc:
             raise pytest.UsageError(str(exc)) from exc
+    tags = config.getoption("--atf-tags")
+    config._atf_tags = {item.strip() for item in str(tags).split(",") if item.strip()} if tags else set()
 
 
 def pytest_collect_file(file_path, parent):
@@ -53,6 +57,9 @@ class AtfCaseFile(pytest.File):
         if not isinstance(data, dict) or "teststeps" not in data:
             return []
         case = load_case_file(self.path)
+        tag_filter = getattr(self.config, "_atf_tags", set())
+        if tag_filter and not tag_filter.intersection(case_tags(case)):
+            return []
         config = case.get("config") or {}
         base_name = config.get("name") or self.path.stem
         datas = config.get("datas")

@@ -1,6 +1,7 @@
 # 数据库断言示例：先执行 python examples/make_sqlite_db.py 生成 demo.db
 config:
   name: 数据库断言示例
+  tags: [db]
 
 teststeps:
   - name: 查询用户状态
