@@ -118,6 +118,12 @@ class Runner:
                               started_at, detail)
 
     def _execute(self, client, step, variables, config, detail: StepDetail):
+        if "db" in step:
+            self._execute_db(step, variables, detail)
+        else:
+            self._execute_http(client, step, variables, config, detail)
+
+    def _execute_http(self, client, step, variables, config, detail: StepDetail):
         request = template.render(step["request"], variables)
         if not isinstance(request, dict):
             raise CaseFormatError(f"步骤「{step['name']}」的 request 必须是键值对")
@@ -134,14 +140,28 @@ class Runner:
         response = client.request(method, url, headers=headers, **request)
         detail.status_code = response.status_code
         detail.response_body = _truncate(response.text)
+        self._post_process(response, step, variables)
 
+    def _execute_db(self, step, variables, detail: StepDetail):
+        from .db import query
+
+        db_config = template.render(step["db"], variables)
+        if not isinstance(db_config, dict):
+            raise CaseFormatError(f"步骤「{step['name']}」的 db 必须是键值对")
+        detail.method = "DB"
+        detail.url = str(db_config.get("query", ""))
+        result = query(db_config)
+        detail.response_body = result.text
+        self._post_process(result, step, variables)
+
+    def _post_process(self, result, step, variables):
         for var_name, expression in (step.get("extract") or {}).items():
             variables.set(
                 var_name,
-                extractor.extract_value(response, template.render(expression, variables)),
+                extractor.extract_value(result, template.render(expression, variables)),
             )
         for rule in step.get("validate") or []:
-            self._check(rule, response, variables)
+            self._check(rule, result, variables)
 
     def _check(self, rule, response, variables):
         if not isinstance(rule, dict) or len(rule) != 1:

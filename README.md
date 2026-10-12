@@ -134,6 +134,29 @@ case_name,username,password,expect_code
 > 小贴士：在 YAML 的**流式序列**（`[a, b]`）中引用 `${变量}` 时，`{` 会被误认为映射起点，
 > 需写成 `[$.code, "${expect_code}"]`。改用块状写法（`- eq:` 换行后 `- $.code` / `- ${expect_code}`）则无需引号。
 
+## 数据库断言
+
+步骤可用 `db` 代替 `request`，直接对数据库做校验或准备数据：
+
+```yaml
+teststeps:
+  - name: 校验用户状态
+    db:
+      url: sqlite:///demo.db          # 连接串见下方说明
+      query: "SELECT status FROM users WHERE id = :uid"
+      args:
+        uid: 1
+    extract:
+      status: $[0].status
+    validate:
+      - eq: ["${status}", active]
+```
+
+- 查询结果按行转换为字典列表，用 JSON 路径取值（`$[0].status`）
+- 命名参数用 `args`（如 `:uid`）；位置参数用 `params`（按数据库的占位符书写：SQLite 用 `?`，MySQL/PostgreSQL 用 `%s`）
+- 连接串：`sqlite:///demo.db`、`sqlite:///C:/abs/demo.db`、`mysql://user:pass@host:3306/db`、`postgresql://user:pass@host:5432/db`
+- SQLite 内置零依赖；MySQL 需 `pip install atf[mysql]`，PostgreSQL 需 `pip install atf[postgresql]`
+
 ## AI 生成用例
 
 ```bash

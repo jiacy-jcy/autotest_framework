@@ -14,6 +14,7 @@ atf/            框架核心包
 ├── runner.py     执行引擎：渲染变量→发请求→提取→断言
 ├── parser.py     YAML 用例加载与格式校验
 ├── data.py       数据驱动（CSV/Excel 加载，值统一为字符串）
+├── db.py         数据库断言（SQLite 内置；MySQL/PostgreSQL 可选依赖）
 ├── template.py   变量渲染（${var} 与命名空间 ${env.x} / ${sys.X}）
 ├── extractor.py  响应取值（JSON 路径 / status_code / headers.x / re:正则）
 ├── assertion.py  断言引擎（中英文比较符）
@@ -55,7 +56,7 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 ## 路线图（发布前检查项）
 
 - v0.2（已完成，0.2.0）：`atf init` 脚手架、测试报告 HTML + Allure、pytest 插件
-- v0.3（进行中）：CSV/Excel 数据驱动（已完成）、数据库断言、钩子函数
+- v0.3（进行中）：CSV/Excel 数据驱动（已完成）、数据库断言（已完成）、钩子函数
 - 开发约定补充：pytest 插件测试放 `pytest_tests/`（用 pytester），勿放 `tests/`（后者由 unittest 收集，不依赖 pytest）
 - 发布 PyPI 前：确认包名可用并改名（pyproject.toml 中 `name`）
 - 已完成：GitHub Actions CI（`.github/workflows/test.yml`：Python 3.9–3.12 单测矩阵 + 端到端冒烟）

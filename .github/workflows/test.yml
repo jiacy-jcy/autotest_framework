@@ -77,3 +77,8 @@ jobs:
         run: |
           atf gen examples/openapi.json -o /tmp/generated
           test -f /tmp/generated/generated_cases.yaml
+
+      - name: 数据库断言冒烟
+        run: |
+          python examples/make_sqlite_db.py
+          atf run examples/cases/db_check.yaml

@@ -1,0 +1,17 @@
+# 数据库断言示例：先执行 python examples/make_sqlite_db.py 生成 demo.db
+config:
+  name: 数据库断言示例
+
+teststeps:
+  - name: 查询用户状态
+    db:
+      url: sqlite:///demo.db          # 相对当前工作目录；绝对路径写作 sqlite:///C:/path/demo.db
+      query: "SELECT id, name, status FROM users WHERE id = :uid"
+      args:
+        uid: 1
+    extract:
+      user_name: $[0].name
+      user_status: $[0].status
+    validate:
+      - eq: ["${user_name}", 张三]
+      - eq: ["${user_status}", active]

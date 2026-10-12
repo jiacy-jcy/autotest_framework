@@ -21,8 +21,8 @@ def load_case_file(path) -> dict:
     if not isinstance(steps, list) or not steps:
         raise CaseFormatError(f"用例文件 {p.name} 缺少非空的 teststeps 列表")
     for index, step in enumerate(steps, 1):
-        if not isinstance(step, dict) or "request" not in step:
-            raise CaseFormatError(f"用例文件 {p.name} 第 {index} 个步骤缺少 request 定义")
+        if not isinstance(step, dict) or not ("request" in step or "db" in step):
+            raise CaseFormatError(f"用例文件 {p.name} 第 {index} 个步骤缺少 request 或 db 定义")
         step.setdefault("name", f"步骤{index}")
     data.setdefault("config", {})
     data["__file__"] = str(p)
