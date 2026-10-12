@@ -1,12 +1,15 @@
 """执行引擎：渲染变量 → 发送请求 → 提取变量 → 断言，收集中文结果"""
 import json
+import os
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import httpx
 
 from . import assertion, extractor, template
 from .errors import AssertFailError, ATFError, CaseFormatError
+from .hooks import HookContext, load_hooks
 from .template import Variables
 
 _MAX_PREVIEW = 3000
@@ -91,15 +94,64 @@ class Runner:
             started_at=time.time(),
         )
         steps = case["teststeps"]
-        with httpx.Client(timeout=self.timeout) as client:
-            for index, step in enumerate(steps):
-                result = self._run_step(client, step, variables, config)
-                suite.steps.append(result)
-                if not result.passed:
-                    # 流程型用例：步骤失败后跳过后续，避免一连串无意义的报错
-                    suite.skipped = len(steps) - index - 1
-                    break
+        hooks = load_hooks(config, self._hook_search_dirs(case))
+        ctx = HookContext(variables=variables, config=config, case=case)
+        self._call_hook(hooks.get("before_case"), ctx, "before_case")
+        try:
+            with httpx.Client(timeout=self.timeout) as client:
+                for index, step in enumerate(steps):
+                    result = self._run_step_with_hooks(client, step, variables, config, hooks, ctx)
+                    suite.steps.append(result)
+                    if not result.passed:
+                        # 流程型用例：步骤失败后跳过后续，避免一连串无意义的报错
+                        suite.skipped = len(steps) - index - 1
+                        break
+        finally:
+            self._call_hook(hooks.get("after_case"), ctx, "after_case")
         return suite
+
+    def _hook_search_dirs(self, case: dict) -> list:
+        dirs = [os.getcwd()]
+        case_file = case.get("__file__")
+        if case_file:
+            dirs.append(str(Path(case_file).parent))
+        return dirs
+
+    def _call_hook(self, func, ctx, event):
+        if not func:
+            return
+        try:
+            func(ctx)
+        except ATFError:
+            raise
+        except Exception as exc:
+            raise ATFError(f"钩子 {event} 执行出错：{exc}") from None
+
+    def _run_step_with_hooks(self, client, step, variables, config, hooks, ctx) -> StepResult:
+        ctx.step = step
+        ctx.result = None
+        try:
+            self._call_hook(hooks.get("before_step"), ctx, "before_step")
+        except ATFError as exc:
+            result = StepResult(step["name"], False, 0.0, str(exc), time.time(), StepDetail())
+            ctx.result = result
+            self._apply_after_step(hooks, ctx, result)
+            return result
+        result = self._run_step(client, step, variables, config)
+        ctx.result = result
+        self._apply_after_step(hooks, ctx, result)
+        return result
+
+    def _apply_after_step(self, hooks, ctx, result):
+        func = hooks.get("after_step")
+        if not func:
+            return
+        try:
+            self._call_hook(func, ctx, "after_step")
+        except ATFError as exc:
+            if result.passed:  # 步骤本已通过，因 after_step 钩子出错而判失败
+                result.passed = False
+                result.error = str(exc)
 
     def _run_step(self, client, step, variables, config) -> StepResult:
         detail = StepDetail()

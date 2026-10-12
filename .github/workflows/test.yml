@@ -70,6 +70,7 @@ jobs:
         run: |
           atf run examples/cases/user_flow.yaml -e examples/config.yaml \
             --html reports/atf-report.html --allure allure-results
+          atf run examples/cases/hooks_demo.yaml -e examples/config.yaml
           test -f reports/atf-report.html
           test -f allure-results/environment.properties
 

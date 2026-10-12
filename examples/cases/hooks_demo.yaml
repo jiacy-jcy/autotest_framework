@@ -1,0 +1,30 @@
+# 钩子示例：钩子函数定义在同目录的 hooks.py
+config:
+  name: 钩子示例
+  base_url: ${env.base_url}
+  hooks:
+    before_case: hooks.before_case
+    before_step: hooks.before_step
+    after_step: hooks.after_step
+
+teststeps:
+  - name: 登录
+    request:
+      method: POST
+      url: /api/login
+      json:
+        username: ${env.username}
+        password: ${env.password}
+    extract:
+      token: $.data.token
+    validate:
+      - eq: [$.code, 0]
+
+  - name: 查询（携带钩子注入的请求头）
+    request:
+      method: GET
+      url: /api/users/1
+      headers:
+        Authorization: Bearer ${token}
+    validate:
+      - eq: [$.code, 0]

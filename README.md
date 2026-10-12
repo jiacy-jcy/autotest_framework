@@ -15,6 +15,7 @@
 - **AI 加持**：`atf gen` 从 OpenAPI/Swagger 生成用例，`--llm` 调用大模型补充边界用例
 - **流程编排**：变量提取与传递（`extract`），轻松实现「登录 → 携带令牌访问」
 - **数据驱动**：`${变量}` 占位符贯穿请求、断言；支持 `--env` 环境配置与 CSV/Excel 参数化
+- **数据库与钩子**：`db` 步骤直接校验数据库（SQLite 内置，MySQL/PostgreSQL 可选）；生命周期钩子可注入自定义逻辑
 - **测试报告**：`--html` 零依赖单文件 HTML 报告，`--allure` 导出 Allure 结果
 - **pytest 集成**：`pip install atf[pytest]` 后，YAML 用例可直接在 pytest 中运行
 - **开箱即用**：`atf init` 一键生成项目，自带离线演示服务，5 分钟跑通
@@ -157,6 +158,36 @@ teststeps:
 - 连接串：`sqlite:///demo.db`、`sqlite:///C:/abs/demo.db`、`mysql://user:pass@host:3306/db`、`postgresql://user:pass@host:5432/db`
 - SQLite 内置零依赖；MySQL 需 `pip install atf[mysql]`，PostgreSQL 需 `pip install atf[postgresql]`
 
+## 钩子函数
+
+在 `config.hooks` 中引用 Python 函数（`模块.函数`），在生命周期插入自定义逻辑：
+
+```yaml
+config:
+  name: 带钩子的用例
+  hooks:
+    before_case: hooks.before_case
+    before_step: hooks.before_step
+    after_step:  hooks.after_step
+```
+
+支持 `before_case` / `after_case` / `before_step` / `after_step`，钩子函数接收一个 `context` 参数：
+
+```python
+def before_case(context):
+    context.set("run_id", "RUN-001")   # 注入变量，供用例以 ${run_id} 引用
+
+def before_step(context):
+    context.step["request"]["headers"]["X-Run-Id"] = context.get("run_id")
+
+def after_step(context):
+    if context.result and not context.result.passed:
+        print(f"步骤失败：{context.step['name']}")
+```
+
+- 框架会自动把「当前工作目录」与「用例文件所在目录」加入模块搜索路径
+- 钩子出错会转为中文错误：`before_step` 出错会导致该步骤失败；`after_step` 出错会把本已通过的步骤判为失败
+
 ## AI 生成用例
 
 ```bash
@@ -215,7 +246,7 @@ pytest cases -k 登录                      # 用 -k 选择用例
 
 - [x] v0.1 核心引擎：YAML 用例 / 变量提取 / 中英文断言 / 控制台报告 / AI 生成
 - [x] v0.2 项目脚手架、测试报告 HTML + Allure、pytest 插件
-- [ ] v0.3 数据驱动（CSV/Excel）、数据库断言插件、钩子函数
+- [x] v0.3 数据驱动（CSV/Excel）、数据库断言、钩子函数
 - [ ] v0.4 AI 失败用例智能分析（自动定位是接口变更还是用例问题）
 
 ## 参与贡献
