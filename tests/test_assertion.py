@@ -18,6 +18,12 @@ class TestAssertion(unittest.TestCase):
     def test_regex(self):
         self.assertTrue(compare("regex", "订单号A1001", r"^订单号")[0])
 
+    def test_eq_string_fallback(self):
+        # 数据驱动常见：CSV 里的 "1001" 与响应中的数字 1001 应视为相等
+        self.assertTrue(compare("eq", 1001, "1001")[0])
+        self.assertTrue(compare("eq", "0", 0)[0])
+        self.assertFalse(compare("eq", "abc", 0)[0])
+
     def test_chinese_alias(self):
         self.assertTrue(compare("等于", "admin", "admin")[0])
         self.assertTrue(compare("包含", "查询成功", "成功")[0])

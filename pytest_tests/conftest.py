@@ -17,6 +17,20 @@ class _Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _read_json(self):
+        length = int(self.headers.get("Content-Length") or 0)
+        return json.loads(self.rfile.read(length) or b"{}")
+
+    def do_POST(self):
+        if self.path == "/api/login":
+            data = self._read_json()
+            if data.get("username") == "admin" and data.get("password") == "123456":
+                self._reply({"code": 0, "msg": "登录成功", "data": {"token": "t-001"}})
+            else:
+                self._reply({"code": 1001, "msg": "用户名或密码错误"})
+        else:
+            self._reply({"code": 404, "msg": "接口不存在"}, 404)
+
     def do_GET(self):
         if self.path.startswith("/api/users/"):
             if self.headers.get("Authorization") != "Bearer t-001":

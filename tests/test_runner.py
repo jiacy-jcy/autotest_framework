@@ -1,7 +1,9 @@
 import json
+import tempfile
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
 
 from atf.runner import Runner
 
@@ -87,6 +89,31 @@ class TestRunner(unittest.TestCase):
         # 若 token 提取或传递失败，第二步查询会返回 401 导致断言失败
         suite = Runner().run_case(self._case([{"eq": ["status_code", 200]}]))
         self.assertTrue(all(step.passed for step in suite.steps))
+
+    def test_data_driven_runs_once_per_row(self):
+        base_url = f"http://127.0.0.1:{self.port}"
+        with tempfile.TemporaryDirectory() as tmp:
+            Path(tmp, "login.csv").write_text(
+                "case_name,username,password,expect_code\n"
+                "正确登录,admin,123456,0\n"
+                "密码错误,admin,000000,1001\n",
+                encoding="utf-8",
+            )
+            case = {
+                "config": {"name": "登录参数化", "base_url": base_url, "datas": "login.csv"},
+                "__file__": str(Path(tmp, "case.yaml")),
+                "teststeps": [{
+                    "name": "登录",
+                    "request": {"method": "POST", "url": "/api/login",
+                                "json": {"username": "${username}", "password": "${password}"}},
+                    "validate": [{"eq": ["$.code", "${expect_code}"]}],
+                }],
+            }
+            suites = Runner().run_case_all(case)
+        self.assertEqual(len(suites), 2)
+        self.assertTrue(all(suite.passed for suite in suites))
+        self.assertIn("正确登录", suites[0].name)
+        self.assertIn("密码错误", suites[1].name)
 
     def test_env_namespace_in_flow(self):
         case = {

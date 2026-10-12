@@ -14,7 +14,7 @@
 - **中文友好**：中文报错、中文比较符（`等于`、`包含`、`正则匹配`）、中文文档
 - **AI 加持**：`atf gen` 从 OpenAPI/Swagger 生成用例，`--llm` 调用大模型补充边界用例
 - **流程编排**：变量提取与传递（`extract`），轻松实现「登录 → 携带令牌访问」
-- **数据驱动**：`${变量}` 占位符贯穿请求、断言，支持环境变量与 `--env` 配置文件
+- **数据驱动**：`${变量}` 占位符贯穿请求、断言；支持 `--env` 环境配置与 CSV/Excel 参数化
 - **测试报告**：`--html` 零依赖单文件 HTML 报告，`--allure` 导出 Allure 结果
 - **pytest 集成**：`pip install atf[pytest]` 后，YAML 用例可直接在 pytest 中运行
 - **开箱即用**：`atf init` 一键生成项目，自带离线演示服务，5 分钟跑通
@@ -98,6 +98,41 @@ password: "123456"
 
 > 提示：`env` 与 `sys` 是保留的命名空间前缀。若个别变量名本身含点号
 > （如 `foo.bar`），只要 `foo` 不是 `env`/`sys` 就会按普通变量名整段查找。
+
+## 数据驱动
+
+在 `config.datas` 指定 CSV 或 Excel 文件，用例会按每一行数据分别执行：
+
+```yaml
+config:
+  name: 登录参数化
+  base_url: ${env.base_url}
+  datas: login_data.csv          # 相对用例文件所在目录；也支持 .xlsx
+
+teststeps:
+  - name: 登录
+    request:
+      method: POST
+      url: /api/login
+      json: {username: ${username}, password: ${password}}
+    validate:
+      - eq: [$.code, "${expect_code}"]   # 流式序列中的 ${...} 需加引号
+```
+
+```csv
+case_name,username,password,expect_code
+正确登录,admin,123456,0
+密码错误,admin,wrong-password,1001
+```
+
+- 列名即变量名，可直接在用例中以 `${列名}` 引用
+- 可选列 `case_name`（或 `用例名`）用于区分每次执行的名称
+- 数据值统一按字符串处理；断言 `eq` / `ne` 会做字符串回退（`1001` 与 `"1001"` 视为相等）
+- Excel（`.xlsx`）需安装：`pip install atf[excel]`
+- 在 pytest 中，每一行数据会被参数化为一个独立的用例
+
+> 小贴士：在 YAML 的**流式序列**（`[a, b]`）中引用 `${变量}` 时，`{` 会被误认为映射起点，
+> 需写成 `[$.code, "${expect_code}"]`。改用块状写法（`- eq:` 换行后 `- $.code` / `- ${expect_code}`）则无需引号。
 
 ## AI 生成用例
 

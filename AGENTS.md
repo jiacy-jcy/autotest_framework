@@ -13,6 +13,7 @@ atf/            框架核心包
 ├── scaffold.py   atf init 脚手架（内嵌模板，零打包配置）
 ├── runner.py     执行引擎：渲染变量→发请求→提取→断言
 ├── parser.py     YAML 用例加载与格式校验
+├── data.py       数据驱动（CSV/Excel 加载，值统一为字符串）
 ├── template.py   变量渲染（${var} 与命名空间 ${env.x} / ${sys.X}）
 ├── extractor.py  响应取值（JSON 路径 / status_code / headers.x / re:正则）
 ├── assertion.py  断言引擎（中英文比较符）
@@ -47,12 +48,14 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 - AI 相关功能必须「无密钥可回退」，保证离线可用
 - 变量来源必须用命名空间区分：`${name}` 为用例/运行时变量，`${env.name}` 为 `--env` 配置，`${sys.NAME}` 为系统环境变量
 - 无前缀变量**禁止**回退系统环境变量（Windows 环境变量大小写不敏感，`${username}` 会静默命中系统 `USERNAME`）；只有显式 `${sys.NAME}` 才读取系统变量
+- 数据驱动值统一为字符串，避免数字列在请求体中意外变数字；断言 `eq`/`ne` 做字符串回退（`"0"` 与 `0` 相等）
+- YAML 流式序列 `[a, b]` 中引用 `${变量}` 必须加引号（`[$.code, "${x}"]`），否则 `{` 会被误判为映射起点
 - 修改本文件涉及的任何结构/命令/约定时，同步更新本文件
 
 ## 路线图（发布前检查项）
 
 - v0.2（已完成，0.2.0）：`atf init` 脚手架、测试报告 HTML + Allure、pytest 插件
-- v0.3：CSV/Excel 数据驱动、插件系统
+- v0.3（进行中）：CSV/Excel 数据驱动（已完成）、数据库断言、钩子函数
 - 开发约定补充：pytest 插件测试放 `pytest_tests/`（用 pytester），勿放 `tests/`（后者由 unittest 收集，不依赖 pytest）
 - 发布 PyPI 前：确认包名可用并改名（pyproject.toml 中 `name`）
 - 已完成：GitHub Actions CI（`.github/workflows/test.yml`：Python 3.9–3.12 单测矩阵 + 端到端冒烟）

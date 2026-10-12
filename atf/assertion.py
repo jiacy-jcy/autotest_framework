@@ -19,10 +19,19 @@ def _ordering(op):
     return check
 
 
+def _eq(actual, expected):
+    """相等判断：先做严格比较，失败时回退到字符串比较（兼容 "0" 与 0）"""
+    return actual == expected or str(actual) == str(expected)
+
+
+def _ne(actual, expected):
+    return not _eq(actual, expected)
+
+
 # 比较符 -> (判断函数, 中文描述)
 COMPARATORS = {
-    "eq": (operator.eq, "等于"),
-    "ne": (operator.ne, "不等于"),
+    "eq": (_eq, "等于"),
+    "ne": (_ne, "不等于"),
     "gt": (_ordering(operator.gt), "大于"),
     "ge": (_ordering(operator.ge), "大于等于"),
     "lt": (_ordering(operator.lt), "小于"),

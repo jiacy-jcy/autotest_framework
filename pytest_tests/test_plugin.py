@@ -51,3 +51,31 @@ def test_ignores_non_atf_yaml(pytester):
     pytester.makefile(".yaml", other="foo: bar\n")
     result = pytester.runpytest()
     assert "collected 0 items" in result.stdout.str()
+
+
+def test_data_driven_parametrization(pytester, mock_server):
+    pytester.makefile(
+        ".csv",
+        login="case_name,username,password,expect_code\n"
+              "正确登录,admin,123456,0\n"
+              "密码错误,admin,000000,1001\n",
+    )
+    pytester.makefile(".yaml", case=textwrap.dedent(f"""
+        config:
+          name: 登录参数化
+          base_url: {mock_server}
+          datas: login.csv
+        teststeps:
+          - name: 登录
+            request:
+              method: POST
+              url: /api/login
+              json:
+                username: ${{username}}
+                password: ${{password}}
+            validate:
+              - eq: [$.code, "${{expect_code}}"]
+    """))
+    result = pytester.runpytest("-v")
+    result.assert_outcomes(passed=2)  # 两行数据参数化为两个用例
+    result.stdout.fnmatch_lines(["*正确登录*", "*密码错误*"])

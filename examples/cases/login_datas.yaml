@@ -1,0 +1,18 @@
+# 数据驱动示例：同一用例按 login_data.csv 的每一行分别执行
+config:
+  name: 登录参数化
+  base_url: ${env.base_url}
+  datas: login_data.csv
+
+teststeps:
+  - name: 登录
+    request:
+      method: POST
+      url: /api/login
+      json:
+        username: ${username}
+        password: ${password}
+    validate:
+      - eq: [status_code, 200]
+      - eq: [$.code, "${expect_code}"]      # 流式序列中的 ${...} 需加引号
+      - contains: [$.msg, "${expect_msg}"]

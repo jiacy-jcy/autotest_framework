@@ -55,7 +55,9 @@ def _cmd_run(args) -> int:
 
     env = load_env_file(args.env) if args.env else {}
     runner = Runner(env=env, timeout=args.timeout)
-    suites = [runner.run_case(load_case_file(file)) for file in find_case_files(args.case)]
+    suites = []
+    for file in find_case_files(args.case):
+        suites.extend(runner.run_case_all(load_case_file(file)))
     for suite in suites:
         print_suite(suite)
     all_passed = print_summary(suites)

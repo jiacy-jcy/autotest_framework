@@ -59,14 +59,34 @@ class Runner:
         self.env_variables = dict(env or {})
         self.timeout = timeout
 
-    def run_case(self, case: dict) -> SuiteResult:
+    def run_case_all(self, case: dict) -> list:
+        """执行用例：若 config.datas 指定了数据源，则按行展开为多次执行"""
+        datas = (case.get("config") or {}).get("datas")
+        if not datas:
+            return [self.run_case(case)]
+        if isinstance(datas, list):
+            rows = datas
+        else:
+            from .data import load_data_file, resolve_data_path
+
+            rows = load_data_file(resolve_data_path(case, datas))
+        results = []
+        for index, row in enumerate(rows, 1):
+            suffix = str(row.get("case_name") or row.get("用例名") or f"第{index}行")
+            results.append(self.run_case(case, row=row, name_suffix=suffix))
+        return results
+
+    def run_case(self, case: dict, row: dict = None, name_suffix: str = None) -> SuiteResult:
         config = case.get("config") or {}
         variables = Variables(
-            flat={**self.base_variables, **(config.get("variables") or {})},
+            flat={**self.base_variables, **(config.get("variables") or {}), **(row or {})},
             env=self.env_variables,
         )
+        name = config.get("name", "未命名用例")
+        if name_suffix:
+            name = f"{name} - {name_suffix}"
         suite = SuiteResult(
-            name=config.get("name", "未命名用例"),
+            name=name,
             source=case.get("__file__", ""),
             started_at=time.time(),
         )

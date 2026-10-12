@@ -39,27 +39,54 @@ def pytest_collect_file(file_path, parent):
 
 class AtfCaseFile(pytest.File):
     def collect(self):
-        # 只接管结构化合法的 ATF 用例：解析失败或缺少 teststeps 时返回空，交给其它插件
+        # 只接管结构化合法的 ATF 用例：非 ATF 文件返回空交给其它插件
         try:
-            data = yaml.safe_load(self.path.read_text(encoding="utf-8"))
-        except (OSError, yaml.YAMLError):
+            text = self.path.read_text(encoding="utf-8")
+        except OSError:
+            return []
+        try:
+            data = yaml.safe_load(text)
+        except yaml.YAMLError:
+            if "teststeps" in text:
+                raise  # 明显是 ATF 用例却语法错误，应当报出来而不是静默忽略
             return []
         if not isinstance(data, dict) or "teststeps" not in data:
             return []
         case = load_case_file(self.path)
-        name = (case.get("config") or {}).get("name") or self.path.stem
-        item = AtfCaseItem.from_parent(self, name=name)
-        item.atf_case = case
-        return [item]
+        config = case.get("config") or {}
+        base_name = config.get("name") or self.path.stem
+        datas = config.get("datas")
+        if not datas:
+            item = AtfCaseItem.from_parent(self, name=base_name)
+            item.atf_case = case
+            return [item]
+
+        # 数据驱动：每行数据参数化为一个独立的 pytest 用例
+        from .data import load_data_file, resolve_data_path
+
+        rows = datas if isinstance(datas, list) else load_data_file(resolve_data_path(case, datas))
+        items = []
+        for index, row in enumerate(rows, 1):
+            suffix = str(row.get("case_name") or row.get("用例名") or f"第{index}行")
+            item = AtfCaseItem.from_parent(self, name=f"{base_name} - {suffix}")
+            item.atf_case = case
+            item.atf_row = row
+            item.atf_suffix = suffix
+            items.append(item)
+        return items
 
 
 class AtfCaseItem(pytest.Item):
     atf_case = None
+    atf_row = None
+    atf_suffix = None
 
     def runtest(self):
         env = getattr(self.config, "_atf_env", {})
         timeout = self.config.getoption("--atf-timeout")
-        suite = Runner(env=env, timeout=timeout).run_case(self.atf_case)
+        suite = Runner(env=env, timeout=timeout).run_case(
+            self.atf_case, row=self.atf_row, name_suffix=self.atf_suffix
+        )
         if not suite.passed:
             raise AtfCaseFailed(suite)
 
