@@ -1,0 +1,17 @@
+# 公共前置子用例：被其它用例通过 use 引用，登录并提取令牌
+config:
+  name: 登录前置
+
+teststeps:
+  - name: 登录
+    request:
+      method: POST
+      url: /api/login
+      json:
+        username: ${env.username}
+        password: ${env.password}
+    extract:
+      token: $.data.token
+      user_id: $.data.user_id
+    validate:
+      - eq: [$.code, 0]

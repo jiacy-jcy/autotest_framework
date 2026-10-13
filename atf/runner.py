@@ -11,6 +11,7 @@ from . import assertion, extractor, plugins, template
 from .errors import AssertFailError, ATFError, CaseFormatError
 from .hooks import HookContext, load_hooks
 from .mask import mask_keys, mask_text
+from .parser import load_case_file
 from .template import Variables
 
 _MAX_PREVIEW = 3000
@@ -117,7 +118,10 @@ class Runner:
             source=case.get("__file__", ""),
             started_at=time.time(),
         )
-        steps = case["teststeps"]
+        case_file = case.get("__file__")
+        base_dir = Path(case_file).parent if case_file else Path.cwd()
+        seen = {Path(case_file).resolve()} if case_file else set()
+        steps = self._expand_steps(case["teststeps"], base_dir, variables, seen)
         plugins.load_plugins(config, self._hook_search_dirs(case))
         hooks = load_hooks(config, self._hook_search_dirs(case))
         ctx = HookContext(variables=variables, config=config, case=case)
@@ -134,6 +138,34 @@ class Runner:
         finally:
             self._call_hook(hooks.get("after_case"), ctx, "after_case")
         return suite
+
+    def _expand_steps(self, steps: list, base_dir, variables, seen: set) -> list:
+        """把 use 子用例步骤内联展开（共享父用例的变量上下文）"""
+        expanded = []
+        for step in steps:
+            use = step.get("use")
+            if not use:
+                expanded.append(step)
+                continue
+            path = template.render(use, variables) if isinstance(use, str) else use
+            case_path = Path(str(path))
+            if not case_path.is_absolute():
+                case_path = Path(base_dir) / case_path
+            case_path = case_path.resolve()
+            if case_path in seen:
+                raise ATFError(f"子用例循环引用：{case_path}")
+            if not case_path.exists():
+                raise ATFError(f"子用例文件不存在：{case_path}")
+            sub_case = load_case_file(case_path)
+            sub_name = (sub_case.get("config") or {}).get("name") or case_path.stem
+            sub_steps = self._expand_steps(
+                sub_case["teststeps"], case_path.parent, variables, seen | {case_path}
+            )
+            for sub_step in sub_steps:
+                merged = dict(sub_step)
+                merged["name"] = f"{sub_name} / {sub_step.get('name', '步骤')}"
+                expanded.append(merged)
+        return expanded
 
     def _hook_search_dirs(self, case: dict) -> list:
         dirs = [os.getcwd()]

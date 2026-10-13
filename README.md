@@ -173,6 +173,23 @@ atf run cases --retry 2                   # 失败用例重试 2 次
 - **并发**：`-w/--workers N` 按用例并发；同一用例内的步骤仍按顺序执行
 - **重试**：`--retry N` 对失败用例整例重跑，控制台报告会标注重试次数
 
+**子用例引用**：把公共前置（如登录）抽成一个文件，用 `use` 内联复用，改一处全套生效：
+
+```yaml
+# main.yaml
+teststeps:
+  - use: common/login.yaml        # 路径相对当前用例文件
+  - name: 查询当前用户
+    request:
+      method: GET
+      url: /api/users/${user_id}
+      headers: {Authorization: "Bearer ${token}"}
+    validate:
+      - eq: [$.code, 0]
+```
+
+被引用用例中 `extract` 的变量会传递给父用例；框架会检测循环引用。
+
 ## 数据库断言
 
 步骤可用 `db` 代替 `request`，直接对数据库做校验或准备数据：
