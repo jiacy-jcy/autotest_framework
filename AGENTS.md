@@ -67,3 +67,36 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 - 钩子事件：before_case / after_case / before_step / after_step；钩子文件会自动从「当前目录 + 用例目录」导入
 - 发布 PyPI 前：确认包名可用并改名（pyproject.toml 中 `name`）
 - 已完成：GitHub Actions CI（`.github/workflows/test.yml`：Python 3.9–3.12 单测矩阵 + 端到端冒烟）
+
+### 后续迭代规划（v0.6 → v1.0）
+
+总方向：**补复用短板 → 降使用门槛 → v1.0 稳定发布**。不内置浏览器自动化（UI 层留给插件生态）。
+
+- v0.6 复用度补强（优先级最高，团队采用的分水岭）：
+  - 套件级会话共享：`config` 新增 `session: shared`，套件内复用同一 httpx.Client，登录一次全程携带
+  - 子用例引用：步骤支持 `use: login.yaml`，公共前置模块化（改一处全套件生效）
+  - 内置变量函数：`${uuid()}` / `${timestamp()}` / `${rand_str(8)}` / `${int(1,100)}`，模板层函数求值
+  - 报告脱敏：`config.mask` 列表，HTML/Allure 报告中打码敏感字段
+- v0.7 断言与提取增强：
+  - JSON Schema 断言（jsonschema 作可选依赖 `atf[schema]`）
+  - 类型断言 `is_type`、数组包含 `contains_any`
+  - HTML/XPath 提取器（可选依赖 `atf[html]`，注册 `xpath:` 前缀；兼作插件生态样板）
+- v0.8 零代码生成生态（差异化主打）：
+  - HAR → 用例：`atf gen --har`，浏览器 DevTools 导出一键转换（对无 OpenAPI 的零基础用户是杀手级功能）
+  - curl → 用例：`atf gen --curl`
+  - OpenAPI 生成增强：识别 `securitySchemes` 自动串联登录流；参数枚举自动参数化
+  - AI 修补建议：失败分析给出用例修改 diff（ai-fix）
+- v0.9 企业落地：
+  - 多环境 profile：config 内 dev/test/prod 分区，`--env-name` 切换
+  - 报告趋势：本地累积历史通过率，HTML 报告画趋势图
+  - CI/CD 示例：GitHub Actions / Jenkins / GitLab CI 文档与模板
+- v1.0 稳定与发布：
+  - 改名 + 发布 PyPI（建议提前到 v0.7/v0.8 先发 0.x，`pip install -e .` 对普通用户是门槛，早发布早积累用户）
+  - 插件生态：`atf.plugins` entry point 规范文档 + 官方示例插件
+  - 规模验证：数千用例下 `-w` 并发与报告生成的性能
+
+### 关键决策
+
+- **UI 层不内置**：不引入 Selenium/Playwright，另写《ATF + Playwright 分层实践》文档引导组合使用，保持「AI + 中文 + 极简依赖」定位
+- **依赖约束延续**：新能力一律走可选依赖（`atf[excel]` 模式），核心保持 httpx + PyYAML
+- HAR/curl 生成与子用例引用需同步在 `pytest_tests/` 补 pytest 插件侧行为验证
