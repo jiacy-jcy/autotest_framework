@@ -190,6 +190,21 @@ teststeps:
 
 被引用用例中 `extract` 的变量会传递给父用例；框架会检测循环引用。
 
+**会话共享**：给套件内的用例加 `config.session: shared`，即可复用同一 HTTP 客户端与变量上下文——**登录一次，全程携带**：
+
+```yaml
+config:
+  name: 会话共享-登录
+  session: shared
+teststeps:
+  - name: 登录
+    request: {method: POST, url: /api/login, json: {username: ${env.username}, password: ${env.password}}}
+    extract:
+      token: $.data.token          # 传递给同批次后续共享用例
+```
+
+> 启用共享会话时该批次会**顺序执行**（不并行），以保证变量与连接安全。
+
 ## 数据库断言
 
 步骤可用 `db` 代替 `request`，直接对数据库做校验或准备数据：

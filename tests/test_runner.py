@@ -97,7 +97,7 @@ class TestRunner(unittest.TestCase):
         runner = Runner(retry=2)
         calls = {"n": 0}
 
-        def fake_run_case(case, row=None, name_suffix=None):
+        def fake_run_case(case, row=None, name_suffix=None, session=None):
             calls["n"] += 1
             return self._fake_result(passed=calls["n"] >= 2)
 
@@ -111,7 +111,7 @@ class TestRunner(unittest.TestCase):
         runner = Runner(retry=1)
         calls = {"n": 0}
 
-        def fake_run_case(case, row=None, name_suffix=None):
+        def fake_run_case(case, row=None, name_suffix=None, session=None):
             calls["n"] += 1
             return self._fake_result(passed=False, error="断言失败")
 

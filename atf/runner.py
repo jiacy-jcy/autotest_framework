@@ -58,6 +58,25 @@ def join_url(base_url: str, url: str) -> str:
     return base_url.rstrip("/") + "/" + url.lstrip("/")
 
 
+class Session:
+    """共享会话：config.session: shared 的用例复用同一 HTTP 客户端与变量上下文
+
+    用于「登录一次、全程携带」——前一个用例 extract 的变量会传递给后续共享用例，
+    httpx.Client 也会保留连接与 Cookie。
+    """
+
+    def __init__(self, timeout: float):
+        self.client = httpx.Client(timeout=timeout)
+        self.variables = {}
+
+    def close(self):
+        self.client.close()
+
+
+def _is_shared(case: dict) -> bool:
+    return (case.get("config") or {}).get("session") == "shared"
+
+
 class Runner:
     def __init__(self, variables: dict = None, env: dict = None, timeout: float = 30.0,
                  retry: int = 0):
@@ -68,7 +87,9 @@ class Runner:
         self.retry = max(0, int(retry or 0))
 
     def run_cases(self, cases: list, workers: int = 1) -> list:
-        """执行一批用例，可按 workers 并发（标准库多线程）；返回按用例顺序展开的结果"""
+        """执行一批用例；含共享会话时顺序执行，否则可按 workers 并发（标准库多线程）"""
+        if any(_is_shared(case) for case in cases):
+            return self._run_sequential(cases)
         if workers and workers > 1 and len(cases) > 1:
             from concurrent.futures import ThreadPoolExecutor
 
@@ -78,11 +99,23 @@ class Runner:
             groups = [self.run_case_all(case) for case in cases]
         return [suite for group in groups for suite in group]
 
-    def run_case_all(self, case: dict) -> list:
+    def _run_sequential(self, cases: list) -> list:
+        session = Session(self.timeout) if any(_is_shared(c) for c in cases) else None
+        try:
+            results = []
+            for case in cases:
+                use = session if (session and _is_shared(case)) else None
+                results.extend(self.run_case_all(case, session=use))
+            return results
+        finally:
+            if session:
+                session.close()
+
+    def run_case_all(self, case: dict, session=None) -> list:
         """执行用例：若 config.datas 指定了数据源，则按行展开为多次执行"""
         datas = (case.get("config") or {}).get("datas")
         if not datas:
-            return [self._run_with_retry(case)]
+            return [self._run_with_retry(case, session=session)]
         if isinstance(datas, list):
             rows = datas
         else:
@@ -92,24 +125,28 @@ class Runner:
         results = []
         for index, row in enumerate(rows, 1):
             suffix = str(row.get("case_name") or row.get("用例名") or f"第{index}行")
-            results.append(self._run_with_retry(case, row=row, name_suffix=suffix))
+            results.append(self._run_with_retry(case, row=row, name_suffix=suffix, session=session))
         return results
 
-    def _run_with_retry(self, case: dict, row: dict = None, name_suffix: str = None) -> SuiteResult:
+    def _run_with_retry(self, case: dict, row: dict = None, name_suffix: str = None,
+                        session=None) -> SuiteResult:
         suite = None
         for attempt in range(1, self.retry + 2):
-            suite = self.run_case(case, row=row, name_suffix=name_suffix)
+            suite = self.run_case(case, row=row, name_suffix=name_suffix, session=session)
             suite.attempts = attempt
             if suite.passed:
                 break
         return suite
 
-    def run_case(self, case: dict, row: dict = None, name_suffix: str = None) -> SuiteResult:
+    def run_case(self, case: dict, row: dict = None, name_suffix: str = None,
+                 session=None) -> SuiteResult:
         config = case.get("config") or {}
+        shared = session.variables if session else {}
         variables = Variables(
-            flat={**self.base_variables, **(config.get("variables") or {}), **(row or {})},
+            flat={**self.base_variables, **(config.get("variables") or {}), **shared, **(row or {})},
             env=self.env_variables,
         )
+        initial = set(variables.flat)
         name = config.get("name", "未命名用例")
         if name_suffix:
             name = f"{name} - {name_suffix}"
@@ -127,17 +164,26 @@ class Runner:
         ctx = HookContext(variables=variables, config=config, case=case)
         self._call_hook(hooks.get("before_case"), ctx, "before_case")
         try:
-            with httpx.Client(timeout=self.timeout) as client:
-                for index, step in enumerate(steps):
-                    result = self._run_step_with_hooks(client, step, variables, config, hooks, ctx)
-                    suite.steps.append(result)
-                    if not result.passed:
-                        # 流程型用例：步骤失败后跳过后续，避免一连串无意义的报错
-                        suite.skipped = len(steps) - index - 1
-                        break
+            if session is not None:
+                self._run_steps(session.client, steps, variables, config, hooks, ctx, suite)
+            else:
+                with httpx.Client(timeout=self.timeout) as client:
+                    self._run_steps(client, steps, variables, config, hooks, ctx, suite)
         finally:
             self._call_hook(hooks.get("after_case"), ctx, "after_case")
+        if session is not None:
+            # 仅把本次新产生（extract / 钩子写入）的变量沉淀到共享会话
+            session.variables.update({k: v for k, v in variables.flat.items() if k not in initial})
         return suite
+
+    def _run_steps(self, client, steps, variables, config, hooks, ctx, suite):
+        for index, step in enumerate(steps):
+            result = self._run_step_with_hooks(client, step, variables, config, hooks, ctx)
+            suite.steps.append(result)
+            if not result.passed:
+                # 流程型用例：步骤失败后跳过后续，避免一连串无意义的报错
+                suite.skipped = len(steps) - index - 1
+                break
 
     def _expand_steps(self, steps: list, base_dir, variables, seen: set) -> list:
         """把 use 子用例步骤内联展开（共享父用例的变量上下文）"""
