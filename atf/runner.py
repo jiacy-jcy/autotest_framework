@@ -10,6 +10,7 @@ import httpx
 from . import assertion, extractor, plugins, template
 from .errors import AssertFailError, ATFError, CaseFormatError
 from .hooks import HookContext, load_hooks
+from .mask import mask_keys, mask_text
 from .template import Variables
 
 _MAX_PREVIEW = 3000
@@ -195,7 +196,7 @@ class Runner:
 
     def _execute(self, client, step, variables, config, detail: StepDetail):
         if "db" in step:
-            self._execute_db(step, variables, detail)
+            self._execute_db(step, variables, config, detail)
         else:
             self._execute_http(client, step, variables, config, detail)
 
@@ -209,16 +210,17 @@ class Runner:
         url = join_url(base_url, str(request.pop("url", "")))
         headers = {**(config.get("headers") or {}), **(request.pop("headers", None) or {})}
 
+        mask = mask_keys(config)
         detail.method = method
         detail.url = url
-        detail.request_body = _preview_request(request)
+        detail.request_body = mask_text(_preview_request(request), mask)
 
         response = client.request(method, url, headers=headers, **request)
         detail.status_code = response.status_code
-        detail.response_body = _truncate(response.text)
+        detail.response_body = _truncate(mask_text(response.text, mask))
         self._post_process(response, step, variables)
 
-    def _execute_db(self, step, variables, detail: StepDetail):
+    def _execute_db(self, step, variables, config, detail: StepDetail):
         from .db import query
 
         db_config = template.render(step["db"], variables)
@@ -227,7 +229,7 @@ class Runner:
         detail.method = "DB"
         detail.url = str(db_config.get("query", ""))
         result = query(db_config)
-        detail.response_body = result.text
+        detail.response_body = mask_text(result.text, mask_keys(config))
         self._post_process(result, step, variables)
 
     def _post_process(self, result, step, variables):

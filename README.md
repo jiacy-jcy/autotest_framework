@@ -310,6 +310,7 @@ atf run cases -e config.yaml --allure                # 导出 allure-results/
 
 - **HTML 报告（默认）**：零依赖、单文件、全中文，双击即可查看；含汇总统计，逐步展示方法、接口、状态码与耗时，失败步骤自动展开请求体、响应体与失败原因
 - **Allure**：导出标准结果，供已有 Allure 的团队使用：`allure generate allure-results -o allure-report`
+- **脱敏**：`config.mask: [password, token]` 会在报告中对这些字段打码（仅影响报告，不影响真实请求）
 
 ## 在 pytest 中使用
 

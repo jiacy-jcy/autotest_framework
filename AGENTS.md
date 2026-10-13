@@ -19,6 +19,7 @@ atf/            框架核心包
 ├── plugins.py    插件系统（注册自定义比较符/提取器；config.plugins 与 entry point）
 ├── template.py   变量渲染（${var} 与命名空间 ${env.x} / ${sys.X}）
 ├── functions.py  内置变量函数（uuid/timestamp/rand_str/int；可插件扩展）
+├── mask.py       报告脱敏（config.mask，仅影响报告展示）
 ├── extractor.py  响应取值（JSON 路径 / status_code / headers.x / re:正则）
 ├── assertion.py  断言引擎（中英文比较符）
 ├── report.py     中文控制台报告
