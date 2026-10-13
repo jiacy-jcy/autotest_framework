@@ -1,0 +1,18 @@
+# 子用例引用示例：use 内联展开公共前置（共享变量上下文）
+config:
+  name: 子用例引用示例
+  base_url: ${env.base_url}
+  tags: [use]
+
+teststeps:
+  - use: common/login.yaml          # 引用同目录下 common/login.yaml
+
+  - name: 查询当前用户
+    request:
+      method: GET
+      url: /api/users/${user_id}
+      headers:
+        Authorization: Bearer ${token}   # token/user_id 来自被引用的登录子用例
+    validate:
+      - eq: [$.code, 0]
+      - eq: [$.data.name, 张三]

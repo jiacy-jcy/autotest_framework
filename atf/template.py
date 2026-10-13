@@ -5,6 +5,7 @@ import re
 from .errors import VariableNotFoundError
 
 _PATTERN = re.compile(r"\$\{([^}]+)\}")
+_FUNC_PATTERN = re.compile(r"^([^\W\d]\w*)\((.*)\)$")
 
 # 命名空间 -> 中文说明
 NAMESPACES = {
@@ -34,6 +35,11 @@ class Variables:
 
     def resolve(self, name: str):
         name = name.strip()
+        function = _FUNC_PATTERN.match(name)
+        if function:
+            from .functions import evaluate
+
+            return evaluate(function.group(1), function.group(2))
         prefix, sep, key = name.partition(".")
         if sep == "." and prefix in NAMESPACES:
             if prefix == "env":

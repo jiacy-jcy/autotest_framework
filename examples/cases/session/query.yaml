@@ -1,0 +1,16 @@
+# 会话共享-查询：直接复用上一个共享用例登录得到的 token / user_id
+config:
+  name: 会话共享-查询
+  base_url: ${env.base_url}
+  session: shared
+
+teststeps:
+  - name: 查询当前用户
+    request:
+      method: GET
+      url: /api/users/${user_id}
+      headers:
+        Authorization: Bearer ${token}
+    validate:
+      - eq: [$.code, 0]
+      - eq: [$.data.name, 张三]

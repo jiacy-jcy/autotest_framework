@@ -1,0 +1,19 @@
+# 会话共享-登录：config.session: shared 时，extract 的变量会传递给同批次的共享用例
+config:
+  name: 会话共享-登录
+  base_url: ${env.base_url}
+  session: shared
+
+teststeps:
+  - name: 登录
+    request:
+      method: POST
+      url: /api/login
+      json:
+        username: ${env.username}
+        password: ${env.password}
+    extract:
+      token: $.data.token
+      user_id: $.data.user_id
+    validate:
+      - eq: [$.code, 0]

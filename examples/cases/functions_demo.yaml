@@ -1,0 +1,21 @@
+# 内置变量函数示例：uuid() / timestamp() / rand_str() / int()
+config:
+  name: 内置变量函数示例
+  base_url: ${env.base_url}
+  tags: [functions]
+
+teststeps:
+  - name: 登录（携带随机请求号）
+    request:
+      method: POST
+      url: /api/login
+      headers:
+        X-Request-Id: ${uuid()}
+      json:
+        username: ${env.username}
+        password: ${env.password}
+        nonce: ${rand_str(8)}
+    validate:
+      - eq: [$.code, 0]
+      - gt: ["${timestamp()}", 0]
+      - 长度等于: ["${rand_str(6)}", 6]

@@ -20,6 +20,7 @@ class Registry:
     def __init__(self):
         self.comparators = {}   # 名称 -> (判断函数, 中文描述)
         self.extractors = {}    # 前缀 -> 函数(result, 剩余表达式)
+        self.functions = {}     # 变量函数名 -> 函数(*args)
 
     def register_comparator(self, name: str, func, description: str = ""):
         if not callable(func):
@@ -30,6 +31,11 @@ class Registry:
         if not callable(func):
             raise ATFError(f"提取器 {prefix} 的处理函数不可调用")
         self.extractors[prefix] = func
+
+    def register_function(self, name: str, func):
+        if not callable(func):
+            raise ATFError(f"变量函数 {name} 的处理函数不可调用")
+        self.functions[name] = func
 
 
 registry = Registry()

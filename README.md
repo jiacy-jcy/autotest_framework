@@ -102,6 +102,19 @@ password: "123456"
 > 提示：`env` 与 `sys` 是保留的命名空间前缀。若个别变量名本身含点号
 > （如 `foo.bar`），只要 `foo` 不是 `env`/`sys` 就会按普通变量名整段查找。
 
+### 内置变量函数
+
+变量位置可直接调用内置函数：
+
+| 写法 | 说明 |
+|------|------|
+| `${uuid()}` | 生成一个 UUID |
+| `${timestamp()}` | 当前 Unix 时间戳（秒） |
+| `${rand_str(8)}` | 随机字符串（默认 8 位） |
+| `${int(1,100)}` | 指定区间内的随机整数 |
+
+字符串参数需加引号（如 `${rand_str(8)}`、`${pick('a','b')}`）；插件也可注册自定义函数。
+
 ## 数据驱动
 
 在 `config.datas` 指定 CSV 或 Excel 文件，用例会按每一行数据分别执行：
@@ -159,6 +172,38 @@ atf run cases --retry 2                   # 失败用例重试 2 次
 - **标签**：在 `config.tags` 声明（列表或逗号分隔字符串），用 `--tags smoke,login` 选择
 - **并发**：`-w/--workers N` 按用例并发；同一用例内的步骤仍按顺序执行
 - **重试**：`--retry N` 对失败用例整例重跑，控制台报告会标注重试次数
+
+**子用例引用**：把公共前置（如登录）抽成一个文件，用 `use` 内联复用，改一处全套生效：
+
+```yaml
+# main.yaml
+teststeps:
+  - use: common/login.yaml        # 路径相对当前用例文件
+  - name: 查询当前用户
+    request:
+      method: GET
+      url: /api/users/${user_id}
+      headers: {Authorization: "Bearer ${token}"}
+    validate:
+      - eq: [$.code, 0]
+```
+
+被引用用例中 `extract` 的变量会传递给父用例；框架会检测循环引用。
+
+**会话共享**：给套件内的用例加 `config.session: shared`，即可复用同一 HTTP 客户端与变量上下文——**登录一次，全程携带**：
+
+```yaml
+config:
+  name: 会话共享-登录
+  session: shared
+teststeps:
+  - name: 登录
+    request: {method: POST, url: /api/login, json: {username: ${env.username}, password: ${env.password}}}
+    extract:
+      token: $.data.token          # 传递给同批次后续共享用例
+```
+
+> 启用共享会话时该批次会**顺序执行**（不并行），以保证变量与连接安全。
 
 ## 数据库断言
 
@@ -297,6 +342,7 @@ atf run cases -e config.yaml --allure                # 导出 allure-results/
 
 - **HTML 报告（默认）**：零依赖、单文件、全中文，双击即可查看；含汇总统计，逐步展示方法、接口、状态码与耗时，失败步骤自动展开请求体、响应体与失败原因
 - **Allure**：导出标准结果，供已有 Allure 的团队使用：`allure generate allure-results -o allure-report`
+- **脱敏**：`config.mask: [password, token]` 会在报告中对这些字段打码（仅影响报告，不影响真实请求）
 
 ## 在 pytest 中使用
 

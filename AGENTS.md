@@ -18,6 +18,8 @@ atf/            框架核心包
 ├── hooks.py      生命周期钩子（before/after_case、before/after_step）
 ├── plugins.py    插件系统（注册自定义比较符/提取器；config.plugins 与 entry point）
 ├── template.py   变量渲染（${var} 与命名空间 ${env.x} / ${sys.X}）
+├── functions.py  内置变量函数（uuid/timestamp/rand_str/int；可插件扩展）
+├── mask.py       报告脱敏（config.mask，仅影响报告展示）
 ├── extractor.py  响应取值（JSON 路径 / status_code / headers.x / re:正则）
 ├── assertion.py  断言引擎（中英文比较符）
 ├── report.py     中文控制台报告
@@ -54,6 +56,9 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 - 无前缀变量**禁止**回退系统环境变量（Windows 环境变量大小写不敏感，`${username}` 会静默命中系统 `USERNAME`）；只有显式 `${sys.NAME}` 才读取系统变量
 - 数据驱动值统一为字符串，避免数字列在请求体中意外变数字；断言 `eq`/`ne` 做字符串回退（`"0"` 与 `0` 相等）
 - YAML 流式序列 `[a, b]` 中引用 `${变量}` 必须加引号（`[$.code, "${x}"]`），否则 `{` 会被误判为映射起点
+- 变量函数写作 `${函数(参数)}`（如 `${uuid()}`、`${rand_str(8)}`）；字符串参数需加引号；插件可用 `registry.register_function` 扩展
+- 子用例引用：步骤用 `use: 相对路径` 内联展开，共享父用例变量上下文（含 extract 结果）；仅内联步骤，忽略子用例的 config/hooks；已检测循环引用
+- 会话共享：`config.session: shared` 的用例复用同一 httpx.Client 与变量上下文；一旦存在共享用例，该批次强制顺序执行（不并行）
 - 修改本文件涉及的任何结构/命令/约定时，同步更新本文件
 
 ## 路线图（发布前检查项）
@@ -62,6 +67,7 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 - v0.3（已完成，0.3.0）：CSV/Excel 数据驱动、数据库断言、钩子函数
 - v0.4（已完成，0.4.0）：AI 失败分析（`atf run --ai-analyze`，规则分类 + LLM 精修）
 - v0.5（已完成，0.5.0）：执行增强（套件/标签/`-w` 并发/`--retry` 重试）、插件系统
+- v0.6（已完成，0.6.0）：套件级会话共享（`session: shared`）、子用例引用（`use:`）、内置变量函数、报告脱敏（`config.mask`）
 - 插件契约：模块提供 `register(registry)`，用 `registry.register_comparator/register_extractor` 注册；同时支持 entry point 组 `atf.plugins`
 - 开发约定补充：pytest 插件测试放 `pytest_tests/`（用 pytester），勿放 `tests/`（后者由 unittest 收集，不依赖 pytest）
 - 钩子事件：before_case / after_case / before_step / after_step；钩子文件会自动从「当前目录 + 用例目录」导入

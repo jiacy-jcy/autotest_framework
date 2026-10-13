@@ -3,6 +3,7 @@ config:
   name: 用户模块接口流程
   base_url: ${env.base_url}
   tags: [smoke, user]
+  mask: [password]           # 报告中对该字段打码
 
 teststeps:
   - name: 登录获取令牌

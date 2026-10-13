@@ -1,0 +1,5 @@
+# 会话共享套件：套件内用例 config.session: shared，登录一次全程携带
+name: 会话共享套件
+cases:
+  - cases/session/login.yaml
+  - cases/session/query.yaml
