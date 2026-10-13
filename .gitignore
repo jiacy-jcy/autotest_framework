@@ -14,3 +14,6 @@ allure-report/
 # IDE
 .idea/
 .vscode/
+
+# 个人运营素材（仅本地保留，不发布到线上）
+/content/
