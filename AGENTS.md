@@ -18,6 +18,7 @@ atf/            框架核心包
 ├── hooks.py      生命周期钩子（before/after_case、before/after_step）
 ├── plugins.py    插件系统（注册自定义比较符/提取器；config.plugins 与 entry point）
 ├── template.py   变量渲染（${var} 与命名空间 ${env.x} / ${sys.X}）
+├── functions.py  内置变量函数（uuid/timestamp/rand_str/int；可插件扩展）
 ├── extractor.py  响应取值（JSON 路径 / status_code / headers.x / re:正则）
 ├── assertion.py  断言引擎（中英文比较符）
 ├── report.py     中文控制台报告
@@ -54,6 +55,7 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 - 无前缀变量**禁止**回退系统环境变量（Windows 环境变量大小写不敏感，`${username}` 会静默命中系统 `USERNAME`）；只有显式 `${sys.NAME}` 才读取系统变量
 - 数据驱动值统一为字符串，避免数字列在请求体中意外变数字；断言 `eq`/`ne` 做字符串回退（`"0"` 与 `0` 相等）
 - YAML 流式序列 `[a, b]` 中引用 `${变量}` 必须加引号（`[$.code, "${x}"]`），否则 `{` 会被误判为映射起点
+- 变量函数写作 `${函数(参数)}`（如 `${uuid()}`、`${rand_str(8)}`）；字符串参数需加引号；插件可用 `registry.register_function` 扩展
 - 修改本文件涉及的任何结构/命令/约定时，同步更新本文件
 
 ## 路线图（发布前检查项）
