@@ -58,8 +58,8 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: 安装框架
-        run: pip install -e .
+      - name: 安装框架（含可选依赖）
+        run: pip install -e ".[schema,html]"
 
       - name: 启动演示服务
         run: |
@@ -71,6 +71,9 @@ jobs:
           atf run examples/cases/user_flow.yaml -e examples/config.yaml \
             --html reports/atf-report.html --allure allure-results
           atf run examples/cases/hooks_demo.yaml -e examples/config.yaml
+          atf run examples/cases/assertions_demo.yaml -e examples/config.yaml
+          atf run examples/cases/schema_demo.yaml -e examples/config.yaml
+          atf run examples/cases/xpath_demo.yaml -e examples/config.yaml
           test -f reports/atf-report.html
           test -f allure-results/environment.properties
 

@@ -25,6 +25,8 @@ atf/            框架核心包
 ├── report.py     中文控制台报告
 ├── html_report.py 自研单文件 HTML 报告（零依赖、内联样式）
 ├── allure_report.py 导出 Allure 结果（allure-results）
+├── schema.py     JSON Schema 断言（可选依赖 atf[schema]，jsonschema）
+├── html_extract.py XPath 提取器（可选依赖 atf[html]；以插件契约实现，兼作插件样板）
 ├── ai.py         OpenAPI→用例生成（规则引擎 + 可选 LLM 增强）
 ├── analyze.py    失败分析（规则分类 + 可选 LLM 精修）
 ├── pytest_plugin.py pytest 插件（YAML 用例接入 pytest，entry point pytest11）
@@ -59,6 +61,8 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 - 变量函数写作 `${函数(参数)}`（如 `${uuid()}`、`${rand_str(8)}`）；字符串参数需加引号；插件可用 `registry.register_function` 扩展
 - 子用例引用：步骤用 `use: 相对路径` 内联展开，共享父用例变量上下文（含 extract 结果）；仅内联步骤，忽略子用例的 config/hooks；已检测循环引用
 - 会话共享：`config.session: shared` 的用例复用同一 httpx.Client 与变量上下文；一旦存在共享用例，该批次强制顺序执行（不并行）
+- 可选依赖模式：schema(jsonschema)/html(lxml)/excel(openpyxl)/mysql/postgresql 一律走 extras；未安装时使用该功能给出中文安装提示（如 `pip install atf[schema]`）
+- 内置扩展（如 html_extract）以插件契约 `register(registry)` 实现，与第三方插件同一套机制
 - 修改本文件涉及的任何结构/命令/约定时，同步更新本文件
 
 ## 路线图（发布前检查项）
@@ -68,6 +72,7 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 - v0.4（已完成，0.4.0）：AI 失败分析（`atf run --ai-analyze`，规则分类 + LLM 精修）
 - v0.5（已完成，0.5.0）：执行增强（套件/标签/`-w` 并发/`--retry` 重试）、插件系统
 - v0.6（已完成，0.6.0）：套件级会话共享（`session: shared`）、子用例引用（`use:`）、内置变量函数、报告脱敏（`config.mask`）
+- v0.7（已完成，0.7.0）：JSON Schema 断言（atf[schema]）、is_type/contains_any、XPath 提取器（atf[html]，插件契约样板）
 - 插件契约：模块提供 `register(registry)`，用 `registry.register_comparator/register_extractor` 注册；同时支持 entry point 组 `atf.plugins`
 - 开发约定补充：pytest 插件测试放 `pytest_tests/`（用 pytester），勿放 `tests/`（后者由 unittest 收集，不依赖 pytest）
 - 钩子事件：before_case / after_case / before_step / after_step；钩子文件会自动从「当前目录 + 用例目录」导入

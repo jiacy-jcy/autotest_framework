@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 # 注意：发布 PyPI 前需确认包名可用，届时改为正式品牌名
 name = "atf"
-version = "0.6.0"
+version = "0.7.0"
 description = "ATF 智测 —— AI 加持、中文友好的接口自动化测试框架"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -20,7 +20,9 @@ pytest = ["pytest>=7.0"]
 excel = ["openpyxl>=3.0"]
 mysql = ["PyMySQL>=1.0"]
 postgresql = ["psycopg2-binary>=2.9"]
-dev = ["pytest>=7.0", "openpyxl>=3.0"]
+schema = ["jsonschema>=4.0"]
+html = ["lxml>=4.0"]
+dev = ["pytest>=7.0", "openpyxl>=3.0", "jsonschema>=4.0", "lxml>=4.0"]
 
 [project.scripts]
 atf = "atf.cli:main"

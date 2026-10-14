@@ -25,9 +25,11 @@ class Variables:
     意外命中 Windows 系统 USERNAME」这类静默错误。
     """
 
-    def __init__(self, flat: dict = None, env: dict = None):
+    def __init__(self, flat: dict = None, env: dict = None, case_dir=None):
         self.flat = dict(flat or {})
         self.env = dict(env or {})
+        # 用例文件所在目录，供相对路径解析（如 JSON Schema 文件）
+        self.case_dir = case_dir
 
     def set(self, name: str, value):
         """写入运行时变量（extract / 框架内部）"""

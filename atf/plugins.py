@@ -43,13 +43,17 @@ _loaded = False
 
 
 def ensure_loaded():
-    """确保 entry point 中的插件已加载（只执行一次）"""
+    """确保内置扩展与 entry point 中的插件已加载（只执行一次）"""
     global _loaded
     if _loaded:
         return
     _loaded = True
     for name, plugin in _discover_entrypoints():
         _activate(plugin, name)
+    # 内置扩展：以插件形式注册（与第三方插件同一套契约，兼作插件生态样板）
+    from . import html_extract
+
+    _activate(html_extract, "atf.html_extract")
 
 
 def load_plugins(config: dict, search_dirs=None):

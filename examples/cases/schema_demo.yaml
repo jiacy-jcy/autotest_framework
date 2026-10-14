@@ -1,0 +1,19 @@
+# JSON Schema 断言示例（需安装：pip install atf[schema]）
+config:
+  name: JSON Schema 断言示例
+  base_url: ${env.base_url}
+  tags: [schema]
+
+teststeps:
+  - use: common/login.yaml
+
+  - name: 校验用户详情结构
+    request:
+      method: GET
+      url: /api/users/${user_id}
+      headers:
+        Authorization: Bearer ${token}
+    validate:
+      - eq: [$.code, 0]
+      - schema: ["$.data", "schemas/user.json"]      # 文件路径相对用例目录
+      - 符合模式: ["$.data.name", {type: string}]     # 也可直接内联

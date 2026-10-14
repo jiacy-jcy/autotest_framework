@@ -1,0 +1,24 @@
+# 断言增强示例：is_type 类型断言 / contains_any 数组包含（均支持中文别名）
+config:
+  name: 断言增强示例
+  base_url: ${env.base_url}
+  tags: [assert]
+
+teststeps:
+  - use: common/login.yaml
+
+  - name: 校验字段类型与取值范围
+    request:
+      method: GET
+      url: /api/users/${user_id}
+      headers:
+        Authorization: Bearer ${token}
+    extract:
+      role: $.data.role
+      user: $.data
+    validate:
+      - is_type: ["$.data.id", int]
+      - 类型为: ["$.data.name", str]
+      - is_type: ["${user}", dict]
+      - contains_any: ["${role}", [admin, dev]]
+      - 包含其一: ["$.data.role", [admin, dev]]

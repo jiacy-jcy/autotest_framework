@@ -141,10 +141,13 @@ class Runner:
     def run_case(self, case: dict, row: dict = None, name_suffix: str = None,
                  session=None) -> SuiteResult:
         config = case.get("config") or {}
+        case_file = case.get("__file__")
+        base_dir = Path(case_file).parent if case_file else Path.cwd()
         shared = session.variables if session else {}
         variables = Variables(
             flat={**self.base_variables, **(config.get("variables") or {}), **shared, **(row or {})},
             env=self.env_variables,
+            case_dir=str(base_dir),
         )
         initial = set(variables.flat)
         name = config.get("name", "未命名用例")
@@ -155,8 +158,6 @@ class Runner:
             source=case.get("__file__", ""),
             started_at=time.time(),
         )
-        case_file = case.get("__file__")
-        base_dir = Path(case_file).parent if case_file else Path.cwd()
         seen = {Path(case_file).resolve()} if case_file else set()
         steps = self._expand_steps(case["teststeps"], base_dir, variables, seen)
         plugins.load_plugins(config, self._hook_search_dirs(case))
@@ -327,6 +328,12 @@ class Runner:
             raise CaseFormatError(f"断言格式错误：{rule!r}，应写成 - 比较符: [检查对象, 期望值]")
         expression = template.render(args[0], variables)
         expected = template.render(args[1], variables)
+        name = assertion.ALIASES.get(str(comparator), str(comparator))
+        if name == "schema" and isinstance(expected, str):
+            # schema 的期望值是字符串时，视为相对用例目录的 Schema 文件路径
+            from .schema import load_schema_file
+
+            expected = load_schema_file(expected, getattr(variables, "case_dir", None))
         actual = extractor.extract_value(response, expression)
         passed, reason = assertion.compare(str(comparator), actual, expected)
         if not passed:

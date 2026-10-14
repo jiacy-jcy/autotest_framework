@@ -1,0 +1,18 @@
+# XPath 提取示例（需安装：pip install atf[html]）
+config:
+  name: XPath 提取示例
+  base_url: ${env.base_url}
+  tags: [xpath]
+
+teststeps:
+  - name: 提取页面内容
+    request:
+      method: GET
+      url: /html/hello
+    extract:
+      title: "xpath://h1"
+      block_id: "xpath://p/@id"
+    validate:
+      - eq: ["${title}", 你好，世界]
+      - eq: ["${block_id}", greet]
+      - is_type: ["${title}", str]

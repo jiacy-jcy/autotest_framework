@@ -34,7 +34,15 @@ class Handler(BaseHTTPRequestHandler):
             self._reply({"code": 404, "msg": "接口不存在"}, 404)
 
     def do_GET(self):
-        if self.path.startswith("/api/users/"):
+        if self.path == "/html/hello":
+            body = ("<html><body><h1>你好，世界</h1>"
+                    "<p id='greet'>ATF 智测</p></body></html>").encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        elif self.path.startswith("/api/users/"):
             if not self._authorized():
                 self._reply({"code": 401, "msg": "未授权，请先登录"}, 401)
                 return
