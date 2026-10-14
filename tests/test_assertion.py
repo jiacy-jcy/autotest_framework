@@ -24,6 +24,22 @@ class TestAssertion(unittest.TestCase):
         self.assertTrue(compare("eq", "0", 0)[0])
         self.assertFalse(compare("eq", "abc", 0)[0])
 
+    def test_is_type(self):
+        self.assertTrue(compare("is_type", 1, "int")[0])
+        self.assertTrue(compare("is_type", "x", "str")[0])
+        self.assertTrue(compare("is_type", {}, "dict")[0])
+        self.assertTrue(compare("is_type", True, "bool")[0])
+        self.assertFalse(compare("is_type", True, "int")[0])   # bool 不误判为 int
+        self.assertFalse(compare("is_type", 1, "unknown")[0])
+        self.assertTrue(compare("类型为", "x", "str")[0])
+
+    def test_contains_any(self):
+        self.assertTrue(compare("contains_any", [1, 2], [2, 3])[0])
+        self.assertTrue(compare("contains_any", "admin", ["admin", "dev"])[0])
+        self.assertTrue(compare("contains_any", ["admin"], "admin")[0])
+        self.assertFalse(compare("contains_any", ["a"], ["b"])[0])
+        self.assertTrue(compare("包含其一", "dev", ["admin", "dev"])[0])
+
     def test_chinese_alias(self):
         self.assertTrue(compare("等于", "admin", "admin")[0])
         self.assertTrue(compare("包含", "查询成功", "成功")[0])

@@ -69,8 +69,15 @@ teststeps:
       - 等于: [$.code, 0]          # 中文比较符
 ```
 
-可用比较符：`eq ne gt ge lt le contains not_contains regex len_eq in startswith endswith`，
-以及中文别名：`等于 不等于 大于 大于等于 小于 小于等于 包含 不包含 正则匹配 长度等于 属于`。
+可用比较符：`eq ne gt ge lt le contains not_contains regex len_eq in startswith endswith is_type contains_any schema`，
+以及中文别名：`等于 不等于 大于 大于等于 小于 小于等于 包含 不包含 正则匹配 长度等于 属于 类型为 包含其一 符合模式`。
+
+### 进阶断言与提取
+
+- **类型断言**：`- is_type: ["$.data.id", int]`（别名 `类型为`；支持 str/int/float/number/bool/list/dict/null 及中文写法）
+- **数组包含**：`- contains_any: ["$.data.role", [admin, dev]]`（别名 `包含其一`；兼容 标量∈数组、数组含标量）
+- **JSON Schema**：`- schema: ["$.data", "schemas/user.json"]`——文件路径相对用例目录，也可直接内联 `{type: object}`（别名 `符合模式`；需 `pip install atf[schema]`）
+- **XPath 提取**（HTML 响应）：`extract: {title: "xpath://h1", id: "xpath://p/@id"}`（需 `pip install atf[html]`；以插件机制实现，可作插件样板）
 
 断言支持第三参数自定义提示：`- eq: [$.code, 0, 登录应成功]`。
 
