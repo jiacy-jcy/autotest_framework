@@ -1,4 +1,5 @@
 """AI 用例生成：内置规则引擎离线可用；配置大模型后可自动补充边界用例"""
+import copy
 import json
 import os
 import re
@@ -11,18 +12,40 @@ from .errors import ATFError
 
 _HTTP_METHODS = ("get", "post", "put", "delete", "patch")
 _TYPE_EXAMPLES = {"string": "demo", "integer": 1, "number": 1.0, "boolean": True}
+_LOGIN_KEYWORDS = ("login", "signin", "sign-in", "token", "auth")
+_ENUM_VARIANT_LIMIT = 3
 
 
 def generate_from_openapi(spec_path, output_dir, use_llm=False):
     """从 OpenAPI/Swagger 文档生成 YAML 用例，返回生成的文件路径"""
     spec = json.loads(Path(spec_path).read_text(encoding="utf-8"))
+    auth_header = _auth_header(_security_schemes(spec))
+    login_path, login_operation = (_find_login_operation(spec) if auth_header else (None, None))
+    auto_login = bool(login_operation)
+
     steps = []
     for path, operations in (spec.get("paths") or {}).items():
         for method, operation in operations.items():
-            if method.lower() in _HTTP_METHODS and isinstance(operation, dict):
-                steps.append(_build_step(path, method.upper(), operation))
+            if method.lower() not in _HTTP_METHODS or not isinstance(operation, dict):
+                continue
+            if auto_login and path == login_path and method.lower() == "post":
+                continue  # 登录接口单独生成为前置步骤
+            built = _build_step(path, method.upper(), operation)
+            if auth_header and _is_secured(operation, spec):
+                for step in built:
+                    step["request"].setdefault("headers", {})[auth_header[0]] = auth_header[1]
+            steps.extend(built)
     if not steps:
         raise ATFError(f"未在 {spec_path} 中找到任何接口定义（paths 为空）")
+
+    hints = []
+    if auto_login:
+        login_step = _build_step(login_path, "POST", login_operation)[0]
+        login_step["name"] = "登录获取令牌"
+        login_step["extract"] = {"token": "$.data.token"}
+        steps = [login_step] + steps
+        hints.append("检测到安全方案：已自动生成登录步骤，并为受保护接口加上认证头。")
+        hints.append("请核对登录步骤的请求体，并按实际响应调整 token 提取路径（默认 $.data.token）。")
 
     if use_llm:
         steps = _enhance_with_llm(steps)
@@ -31,11 +54,13 @@ def generate_from_openapi(spec_path, output_dir, use_llm=False):
     out.mkdir(parents=True, exist_ok=True)
     target = out / "generated_cases.yaml"
     case = {"config": {"name": f"自动生成的用例（来源：{Path(spec_path).name}）"}, "teststeps": steps}
-    target.write_text(yaml.safe_dump(case, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    body = yaml.safe_dump(case, allow_unicode=True, sort_keys=False)
+    comments = "".join(f"# {hint}\n" for hint in hints)
+    target.write_text(comments + body, encoding="utf-8")
     return target
 
 
-def _build_step(path, method, operation) -> dict:
+def _build_step(path, method, operation) -> list:
     step = {
         "name": operation.get("summary") or f"{method} {path}",
         "request": {"method": method, "url": path},
@@ -49,7 +74,65 @@ def _build_step(path, method, operation) -> dict:
     body = _example_body(operation)
     if body:
         step["request"]["json"] = body
-    return step
+
+    # 枚举参数自动参数化：为第一个带 enum 的查询参数按枚举值生成多个变体
+    enum_param, enum_values = _first_enum_param(operation)
+    if not enum_param or len(enum_values) < 2:
+        return [step]
+    variants = []
+    for value in enum_values[:_ENUM_VARIANT_LIMIT]:
+        clone = copy.deepcopy(step)
+        clone["request"]["params"] = dict(params)
+        clone["request"]["params"][enum_param] = value
+        clone["name"] = f"{step['name']}（{enum_param}={value}）"
+        variants.append(clone)
+    return variants
+
+
+def _first_enum_param(operation: dict) -> tuple:
+    for param in operation.get("parameters") or []:
+        if param.get("in") != "query" or "name" not in param:
+            continue
+        enum = (param.get("schema") or {}).get("enum")
+        if isinstance(enum, list) and enum:
+            return str(param["name"]), enum
+    return None, []
+
+
+def _security_schemes(spec: dict) -> dict:
+    components = spec.get("components") or {}
+    schemes = components.get("securitySchemes") or spec.get("securityDefinitions") or {}
+    return schemes if isinstance(schemes, dict) else {}
+
+
+def _auth_header(schemes: dict):
+    """从安全方案推导认证头：返回 (头名称, 头模板)；无法自动推导时返回 None"""
+    for scheme in schemes.values():
+        if not isinstance(scheme, dict):
+            continue
+        kind = str(scheme.get("type") or "").lower()
+        if kind == "http" and str(scheme.get("scheme") or "").lower() == "bearer":
+            return "Authorization", "Bearer ${token}"
+        if kind == "apiKey" and str(scheme.get("in") or "").lower() == "header" and scheme.get("name"):
+            return str(scheme["name"]), "${token}"
+    return None
+
+
+def _find_login_operation(spec: dict) -> tuple:
+    for path, operations in (spec.get("paths") or {}).items():
+        if not any(word in str(path).lower() for word in _LOGIN_KEYWORDS):
+            continue
+        for method, operation in operations.items():
+            if method.lower() == "post" and isinstance(operation, dict):
+                return path, operation
+    return None, None
+
+
+def _is_secured(operation: dict, spec: dict) -> bool:
+    security = operation.get("security", None)
+    if security is None:
+        security = spec.get("security")
+    return bool(security)  # security: [] 表示显式无需认证
 
 
 def _example_value(schema: dict):
@@ -57,6 +140,9 @@ def _example_value(schema: dict):
         return schema["example"]
     if "default" in schema:
         return schema["default"]
+    enum = schema.get("enum")
+    if isinstance(enum, list) and enum:
+        return enum[0]
     return _TYPE_EXAMPLES.get(schema.get("type", "string"), "demo")
 
 

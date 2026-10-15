@@ -24,12 +24,17 @@ def main(argv=None) -> int:
                        help="导出 Allure 结果目录，可指定路径（默认 allure-results）")
     p_run.add_argument("--ai-analyze", action="store_true",
                        help="失败时分析原因（配置 ATF_AI_API_KEY 则用大模型，否则给出规则判断）")
+    p_run.add_argument("--ai-fix", action="store_true",
+                       help="在失败分析基础上让大模型给出用例修补建议（需配置 ATF_AI_API_KEY）")
     p_run.add_argument("--tags", help="仅运行包含指定标签的用例，多个用逗号分隔，如 smoke,login")
     p_run.add_argument("-w", "--workers", type=int, default=1, help="并发执行的用例数，默认 1（顺序执行）")
     p_run.add_argument("--retry", type=int, default=0, help="失败用例重试次数，默认 0")
 
-    p_gen = sub.add_parser("gen", help="从 OpenAPI/Swagger 文档生成用例（--llm 可 AI 增强）")
-    p_gen.add_argument("spec", help="OpenAPI/Swagger 文档路径（JSON 格式）")
+    p_gen = sub.add_parser(
+        "gen", help="从 OpenAPI/HAR 生成用例；--curl 转换 curl 命令（--llm 可 AI 增强）")
+    p_gen.add_argument("spec", nargs="?", help="OpenAPI/Swagger 或 HAR 文件路径（自动识别）")
+    p_gen.add_argument("--curl",
+                       help="要转换的 curl 命令（DevTools「Copy as cURL」），也可传命令所在文件路径")
     p_gen.add_argument("-o", "--output", default="cases", help="用例输出目录，默认 cases")
     p_gen.add_argument("--llm", action="store_true",
                        help="调用大模型补充边界用例（需配置 ATF_AI_API_KEY 等环境变量）")
@@ -78,10 +83,10 @@ def _cmd_run(args) -> int:
     all_passed = print_summary(suites)
 
     analyses = None
-    if getattr(args, "ai_analyze", False):
+    if getattr(args, "ai_analyze", False) or getattr(args, "ai_fix", False):
         from .analyze import analyze_failures, print_analysis
 
-        analyses = analyze_failures(suites)
+        analyses = analyze_failures(suites, suggest_fix=bool(getattr(args, "ai_fix", False)))
         print_analysis(analyses)
 
     if args.html:
@@ -106,8 +111,21 @@ def _parse_tags(value) -> set:
 
 def _cmd_gen(args) -> int:
     from .ai import generate_from_openapi
+    from .converters import detect_source, generate_from_curl, generate_from_har
 
-    target = generate_from_openapi(args.spec, args.output, use_llm=args.llm)
+    if args.curl and args.spec:
+        print("错误：--curl 与文件路径不能同时使用，请二选一", file=sys.stderr)
+        return 2
+    if args.curl:
+        target = generate_from_curl(args.curl, args.output)
+    elif args.spec:
+        if detect_source(args.spec) == "har":
+            target = generate_from_har(args.spec, args.output)
+        else:
+            target = generate_from_openapi(args.spec, args.output, use_llm=args.llm)
+    else:
+        print("错误：请提供 OpenAPI/HAR 文件路径，或用 --curl 传入命令", file=sys.stderr)
+        return 2
     print(f"已生成用例文件：{target}")
     return 0
 

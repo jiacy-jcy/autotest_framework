@@ -1,7 +1,12 @@
+import os
 import unittest
+from unittest import mock
 
+import yaml
+
+from atf import analyze
 from atf.analyze import analyze_failures, classify_by_rules, print_analysis
-from atf.runner import StepDetail, StepResult, SuiteResult
+from atf.runner import Runner, StepDetail, StepResult, SuiteResult
 
 
 def _failed_step(name, error, status=None, method="POST", url="/api/x"):
@@ -48,6 +53,52 @@ class TestAnalyze(unittest.TestCase):
 
     def test_print_analysis_handles_empty(self):
         print_analysis([])  # 不应抛出异常
+
+
+class TestAiFix(unittest.TestCase):
+    def test_raw_step_propagates_from_runner(self):
+        case = {
+            "config": {"name": "结构校验"},
+            "teststeps": [{
+                "name": "查询",
+                "db": {"url": "sqlite:///:memory:", "query": "SELECT 42 AS n"},
+                "validate": [{"eq": ["$[0].n", 999]}],
+            }],
+        }
+        suite = Runner().run_case(case)
+        self.assertFalse(suite.passed)
+        analyses = analyze_failures([suite], use_ai=False)
+        self.assertIn("validate", analyses[0].step_yaml)  # 原步骤 YAML 可用于修补建议
+
+    def test_fix_diff_with_mocked_llm(self):
+        raw_step = {"name": "登录", "request": {"method": "POST", "url": "/api/login",
+                     "json": {"username": "admin", "password": "123456"}},
+                    "validate": [{"eq": ["$.code", 999]}]}
+        step = StepResult("登录", False, 0.01, "断言失败：$.code 期望等于 999，实际为 0",
+                          1000.0, StepDetail(method="POST", url="/api/login", status_code=200),
+                          raw_step)
+        suite = SuiteResult("用例", "case.yaml", [step], 0, 999.0)
+        fixed = dict(raw_step)
+        fixed["validate"] = [{"eq": ["$.code", 0]}]
+        fixed_yaml = yaml.safe_dump(fixed, allow_unicode=True, sort_keys=False)
+
+        os.environ["ATF_AI_API_KEY"] = "test-key"
+        try:
+            with mock.patch.object(analyze, "_llm_complete", return_value=fixed_yaml):
+                analyses = analyze.analyze_failures([suite], use_ai=True, suggest_fix=True)
+        finally:
+            os.environ.pop("ATF_AI_API_KEY", None)
+
+        self.assertEqual(len(analyses), 1)
+        self.assertTrue(analyses[0].fix)
+        self.assertIn("999", analyses[0].fix)
+        self.assertIn("建议修改", analyses[0].fix)
+
+    def test_fix_without_api_key_prints_hint(self):
+        suite = _suite([_failed_step("查询", "断言失败：$.code 期望等于 0，实际为 1001")])
+        os.environ.pop("ATF_AI_API_KEY", None)
+        analyses = analyze_failures([suite], use_ai=True, suggest_fix=True)
+        self.assertEqual(analyses[0].fix, "")  # 无密钥时不生成修补建议，不崩溃
 
 
 if __name__ == "__main__":

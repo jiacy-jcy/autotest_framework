@@ -81,6 +81,10 @@ jobs:
         run: |
           atf gen examples/openapi.json -o /tmp/generated
           test -f /tmp/generated/generated_cases.yaml
+          atf gen examples/demo.har -o /tmp/har_out
+          test -f /tmp/har_out/har_cases.yaml
+          atf gen --curl examples/curl_command.txt -o /tmp/curl_out
+          test -f /tmp/curl_out/curl_cases.yaml
 
       - name: 数据库断言冒烟
         run: |

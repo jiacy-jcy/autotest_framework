@@ -1,0 +1,1 @@
+curl 'https://demo.local/api/login' -X POST -H 'Content-Type: application/json' --data-raw '{"username": "admin", "password": "123456"}' --compressed -s
