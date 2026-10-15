@@ -63,6 +63,7 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 - 会话共享：`config.session: shared` 的用例复用同一 httpx.Client 与变量上下文；一旦存在共享用例，该批次强制顺序执行（不并行）
 - 可选依赖模式：schema(jsonschema)/html(lxml)/excel(openpyxl)/mysql/postgresql 一律走 extras；未安装时使用该功能给出中文安装提示（如 `pip install atf[schema]`）
 - 内置扩展（如 html_extract）以插件契约 `register(registry)` 实现，与第三方插件同一套机制
+- 路线图更新必须三处同步：README「路线图」章节（勾选 `[x]`）、本文件主路线图列表（标注已完成+版本）、本文件「后续迭代规划」（移除已完成条目）
 - 修改本文件涉及的任何结构/命令/约定时，同步更新本文件
 
 ## 路线图（发布前检查项）
@@ -79,19 +80,10 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 - 发布 PyPI 前：确认包名可用并改名（pyproject.toml 中 `name`）
 - 已完成：GitHub Actions CI（`.github/workflows/test.yml`：Python 3.9–3.12 单测矩阵 + 端到端冒烟）
 
-### 后续迭代规划（v0.6 → v1.0）
+### 后续迭代规划（v0.8 → v1.0）
 
-总方向：**补复用短板 → 降使用门槛 → v1.0 稳定发布**。不内置浏览器自动化（UI 层留给插件生态）。
+总方向：**降使用门槛 → 企业落地 → v1.0 稳定发布**（复用补强与断言增强已于 v0.6/v0.7 完成）。不内置浏览器自动化（UI 层留给插件生态）。
 
-- v0.6 复用度补强（优先级最高，团队采用的分水岭）：
-  - 套件级会话共享：`config` 新增 `session: shared`，套件内复用同一 httpx.Client，登录一次全程携带
-  - 子用例引用：步骤支持 `use: login.yaml`，公共前置模块化（改一处全套件生效）
-  - 内置变量函数：`${uuid()}` / `${timestamp()}` / `${rand_str(8)}` / `${int(1,100)}`，模板层函数求值
-  - 报告脱敏：`config.mask` 列表，HTML/Allure 报告中打码敏感字段
-- v0.7 断言与提取增强：
-  - JSON Schema 断言（jsonschema 作可选依赖 `atf[schema]`）
-  - 类型断言 `is_type`、数组包含 `contains_any`
-  - HTML/XPath 提取器（可选依赖 `atf[html]`，注册 `xpath:` 前缀；兼作插件生态样板）
 - v0.8 零代码生成生态（差异化主打）：
   - HAR → 用例：`atf gen --har`，浏览器 DevTools 导出一键转换（对无 OpenAPI 的零基础用户是杀手级功能）
   - curl → 用例：`atf gen --curl`
@@ -102,7 +94,7 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
   - 报告趋势：本地累积历史通过率，HTML 报告画趋势图
   - CI/CD 示例：GitHub Actions / Jenkins / GitLab CI 文档与模板
 - v1.0 稳定与发布：
-  - 改名 + 发布 PyPI（建议提前到 v0.7/v0.8 先发 0.x，`pip install -e .` 对普通用户是门槛，早发布早积累用户）
+  - 改名 + 发布 PyPI（建议在 v0.8 期间先发 0.x，`pip install -e .` 对普通用户是门槛，早发布早积累用户）
   - 插件生态：`atf.plugins` entry point 规范文档 + 官方示例插件
   - 规模验证：数千用例下 `-w` 并发与报告生成的性能
 
