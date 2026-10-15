@@ -27,6 +27,7 @@ atf/            框架核心包
 ├── allure_report.py 导出 Allure 结果（allure-results）
 ├── schema.py     JSON Schema 断言（可选依赖 atf[schema]，jsonschema）
 ├── html_extract.py XPath 提取器（可选依赖 atf[html]；以插件契约实现，兼作插件样板）
+├── converters.py HAR/curl→用例零代码转换（静态过滤/去重/拆 base_url/还原请求体）
 ├── ai.py         OpenAPI→用例生成（规则引擎 + 可选 LLM 增强）
 ├── analyze.py    失败分析（规则分类 + 可选 LLM 精修）
 ├── pytest_plugin.py pytest 插件（YAML 用例接入 pytest，entry point pytest11）
@@ -64,6 +65,7 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 - 可选依赖模式：schema(jsonschema)/html(lxml)/excel(openpyxl)/mysql/postgresql 一律走 extras；未安装时使用该功能给出中文安装提示（如 `pip install atf[schema]`）
 - 内置扩展（如 html_extract）以插件契约 `register(registry)` 实现，与第三方插件同一套机制
 - 路线图更新必须三处同步：README「路线图」章节（勾选 `[x]`）、本文件主路线图列表（标注已完成+版本）、本文件「后续迭代规划」（移除已完成条目）
+- `atf gen` 输出命名：OpenAPI→`generated_cases.yaml`、HAR→`har_cases.yaml`、curl→`curl_cases.yaml`（同目录互不覆盖）
 - 修改本文件涉及的任何结构/命令/约定时，同步更新本文件
 
 ## 路线图（发布前检查项）
@@ -74,21 +76,17 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 - v0.5（已完成，0.5.0）：执行增强（套件/标签/`-w` 并发/`--retry` 重试）、插件系统
 - v0.6（已完成，0.6.0）：套件级会话共享（`session: shared`）、子用例引用（`use:`）、内置变量函数、报告脱敏（`config.mask`）
 - v0.7（已完成，0.7.0）：JSON Schema 断言（atf[schema]）、is_type/contains_any、XPath 提取器（atf[html]，插件契约样板）
+- v0.8（已完成，0.8.0）：HAR/curl 零代码转换、OpenAPI 自动串联登录流与枚举参数化、`--ai-fix` 修补建议
 - 插件契约：模块提供 `register(registry)`，用 `registry.register_comparator/register_extractor` 注册；同时支持 entry point 组 `atf.plugins`
 - 开发约定补充：pytest 插件测试放 `pytest_tests/`（用 pytester），勿放 `tests/`（后者由 unittest 收集，不依赖 pytest）
 - 钩子事件：before_case / after_case / before_step / after_step；钩子文件会自动从「当前目录 + 用例目录」导入
 - 发布 PyPI 前：确认包名可用并改名（pyproject.toml 中 `name`）
 - 已完成：GitHub Actions CI（`.github/workflows/test.yml`：Python 3.9–3.12 单测矩阵 + 端到端冒烟）
 
-### 后续迭代规划（v0.8 → v1.0）
+### 后续迭代规划（v0.9 → v1.0）
 
-总方向：**降使用门槛 → 企业落地 → v1.0 稳定发布**（复用补强与断言增强已于 v0.6/v0.7 完成）。不内置浏览器自动化（UI 层留给插件生态）。
+总方向：**企业落地 → v1.0 稳定发布**（复用补强、断言增强、零代码生成已于 v0.6–v0.8 完成）。不内置浏览器自动化（UI 层留给插件生态）。
 
-- v0.8 零代码生成生态（差异化主打）：
-  - HAR → 用例：`atf gen --har`，浏览器 DevTools 导出一键转换（对无 OpenAPI 的零基础用户是杀手级功能）
-  - curl → 用例：`atf gen --curl`
-  - OpenAPI 生成增强：识别 `securitySchemes` 自动串联登录流；参数枚举自动参数化
-  - AI 修补建议：失败分析给出用例修改 diff（ai-fix）
 - v0.9 企业落地：
   - 多环境 profile：config 内 dev/test/prod 分区，`--env-name` 切换
   - 报告趋势：本地累积历史通过率，HTML 报告画趋势图

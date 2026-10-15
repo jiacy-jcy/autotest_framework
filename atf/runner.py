@@ -36,6 +36,7 @@ class StepResult:
     error: str = ""
     started_at: float = 0.0
     detail: StepDetail = field(default_factory=StepDetail)
+    raw_step: dict = field(default_factory=dict)  # 原始步骤定义，供失败修补建议使用
 
 
 @dataclass
@@ -238,10 +239,12 @@ class Runner:
             self._call_hook(hooks.get("before_step"), ctx, "before_step")
         except ATFError as exc:
             result = StepResult(step["name"], False, 0.0, str(exc), time.time(), StepDetail())
+            result.raw_step = step
             ctx.result = result
             self._apply_after_step(hooks, ctx, result)
             return result
         result = self._run_step(client, step, variables, config)
+        result.raw_step = step
         ctx.result = result
         self._apply_after_step(hooks, ctx, result)
         return result

@@ -298,12 +298,19 @@ teststeps:
 - **生态级**：第三方包可通过 entry point 组 `atf.plugins` 声明，安装后自动加载
 - 自定义比较符与内置比较符同等使用；自定义提取器以前缀 `名称:` 引用
 
-## AI 生成用例
+## 零代码生成用例
 
 ```bash
-atf gen openapi.json -o cases          # 规则引擎离线生成基础用例
-atf gen openapi.json -o cases --llm    # 追加 AI 生成的边界/异常用例
+atf gen openapi.json -o cases --llm   # OpenAPI/Swagger（--llm 追加 AI 边界用例）
+atf gen demo.har -o cases             # HAR：浏览器 DevTools「Save all as HAR」一键转换
+atf gen --curl "curl 'https://...' -H '...' --data-raw '...'"   # curl 命令一键转换
 ```
+
+文件类型自动识别（HAR / OpenAPI）：
+
+- **HAR 转换**：自动过滤静态资源与预检请求、按（方法/地址/请求体）去重、拆出 base_url、剔除无意义请求头；JSON 与表单请求体自动还原
+- **curl 转换**：支持 `-H / -d / --data-raw / --json / -u / -A / -e / -b` 等常用参数；`-u` 自动转 Basic 认证头；JSON 与表单体自动还原
+- **OpenAPI 增强**：检测到 `securitySchemes` 时自动串联登录流（生成登录步骤、受保护接口自动带认证头，文件头附需人工核对的中文提示）；带枚举的查询参数自动按枚举值参数化（上限 3 个变体）
 
 AI 增强通过环境变量配置（兼容 OpenAI 及各类国产模型的兼容接口）：
 
@@ -321,11 +328,13 @@ set ATF_AI_MODEL=deepseek-chat
 
 ```bash
 atf run cases -e config.yaml --ai-analyze
+atf run cases -e config.yaml --ai-analyze --ai-fix   # 同时让大模型给出修补建议
 atf run cases -e config.yaml --ai-analyze --html report.html   # 分析结果同时写入 HTML 报告
 ```
 
 - **无密钥**：内置规则引擎离线分类（环境问题 / 认证问题 / 接口变更 / 服务端异常 / 用例问题）
 - **配置 `ATF_AI_API_KEY`**：交给大模型给出更准确的原因与建议
+- **`--ai-fix`**：让大模型给出修改后的步骤 YAML，以 diff 形式展示（无密钥时给出提示，不影响执行）
 - 分类结果同时出现在控制台与 HTML 报告中
 
 示例输出：
@@ -371,8 +380,9 @@ pytest cases -k 登录                      # 用 -k 选择用例
 | 命令 | 说明 |
 |------|------|
 | `atf init [目录] [--force]` | 初始化示例项目（配置 + 用例 + 演示服务） |
-| `atf run <用例/目录/套件> [-e 环境配置.yaml] [--tags 标签] [-w 并发数] [--retry 次数] [--html 路径] [--allure 目录] [--ai-analyze]` | 执行用例（支持套件/标签/并发/重试与报告），全部通过退出码为 0 |
-| `atf gen <openapi.json> [-o 输出目录] [--llm]` | 生成用例 |
+| `atf run <用例/目录/套件> [-e 环境配置.yaml] [--tags 标签] [-w 并发数] [--retry 次数] [--html 路径] [--allure 目录] [--ai-analyze] [--ai-fix]` | 执行用例（支持套件/标签/并发/重试与报告），全部通过退出码为 0 |
+| `atf gen <openapi.json 或 demo.har> [-o 输出目录] [--llm]` | 生成用例（文件类型自动识别） |
+| `atf gen --curl "<curl 命令或命令文件>" [-o 输出目录]` | curl 命令转用例 |
 | `atf --version` | 查看版本 |
 
 ## 路线图
@@ -384,7 +394,7 @@ pytest cases -k 登录                      # 用 -k 选择用例
 - [x] v0.5 执行增强（套件/标签/并发/重试）、插件系统
 - [x] v0.6 复用度补强：套件级会话共享（登录一次全程携带）、子用例引用、内置变量函数（`${uuid()}` 等）、报告脱敏
 - [x] v0.7 断言与提取增强：JSON Schema 断言、类型/数组断言、XPath 提取器（可选依赖 `atf[html]`）
-- [ ] v0.8 零代码生成生态：HAR / curl 一键转用例、OpenAPI 自动串联登录流、AI 修补建议
+- [x] v0.8 零代码生成生态：HAR / curl 一键转用例、OpenAPI 自动串联登录流、AI 修补建议
 - [ ] v0.9 企业落地：多环境 profile（dev/test/prod 一键切换）、报告趋势、CI/CD 示例
 - [ ] v1.0 稳定与发布：改名发布 PyPI、插件生态文档、大规模并发验证
 
