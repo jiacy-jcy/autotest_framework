@@ -1,0 +1,25 @@
+# 能力巡检套件：一条命令跑遍主要特性演示
+#
+# 前置：
+#   python examples/mock_server.py                 # 启动演示服务（端口 8899）
+#   python examples/prepare_demo_data.py           # 生成 demo.db 与 login_data.xlsx
+#   pip install -e ".[excel,schema,html]"          # Excel/Schema/XPath 示例的可选依赖
+#   pip install -e ".[mysql,postgresql]"           # 如需数据库示例连真实库
+#
+# 注意：演示服务是有状态的（user_flow 会修改用户名），重复巡检请先重启服务。
+# 运行：atf run examples/feature_suite.yaml -e examples/configs/envs.yaml --env-name test
+name: 特性巡检
+cases:
+  - cases/functions_demo.yaml        # 内置变量函数
+  - cases/assertions_demo.yaml       # is_type / contains_any
+  - cases/plugin_demo.yaml           # 插件：自定义比较符与提取器
+  - cases/schema_demo.yaml           # JSON Schema 断言
+  - cases/xpath_demo.yaml            # XPath 提取
+  - cases/db_check.yaml              # 数据库断言
+  - cases/hooks_demo.yaml            # 生命周期钩子
+  - cases/use_demo.yaml              # 子用例引用
+  - cases/excel_datas.yaml           # 数据驱动（Excel）
+  - cases/login_datas.yaml           # 数据驱动（CSV）
+  - cases/session/login.yaml         # 会话共享：登录
+  - cases/session/query.yaml         # 会话共享：复用令牌查询
+  - cases/user_flow.yaml             # 基础流程 + 报告脱敏（放最后，会修改演示数据）

@@ -1,0 +1,5 @@
+# 多环境 profile 示例：--env 本文件 + --env-name 选择环境
+default: test                             # 不传 --env-name 时使用
+environments:
+  test: {base_url: http://127.0.0.1:8899, username: admin, password: "123456"}
+  prod: {base_url: http://prod.example, username: admin, password: "prod-secret"}

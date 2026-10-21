@@ -46,6 +46,7 @@ docs/           CI/CD 集成指南等（docs/ci-cd.md）
 python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 .venv\Scripts\python -m unittest discover -s tests       # 跑测试
 .venv\Scripts\python examples\mock_server.py             # 启动演示接口（8899 端口）
+.venv\Scripts\python examples\prepare_demo_data.py       # 生成演示数据（demo.db / login_data.xlsx）
 .venv\Scripts\atf run examples\cases\user_flow.yaml -e examples\config.yaml  # 端到端验证
 ```
 
@@ -60,6 +61,8 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 - 变量来源必须用命名空间区分：`${name}` 为用例/运行时变量，`${env.name}` 为 `--env` 配置，`${sys.NAME}` 为系统环境变量
 - 无前缀变量**禁止**回退系统环境变量（Windows 环境变量大小写不敏感，`${username}` 会静默命中系统 `USERNAME`）；只有显式 `${sys.NAME}` 才读取系统变量
 - 数据驱动值统一为字符串，避免数字列在请求体中意外变数字；断言 `eq`/`ne` 做字符串回退（`"0"` 与 `0` 相等）
+- 相对路径统一基于**用例所在目录**解析：数据文件（datas）、子用例（use）、JSON Schema、sqlite 库文件；新增相对路径能力必须遵守此规则
+- examples 改动必须保持 `feature_suite.yaml` 巡检可通过；新增能力须同步新增示例用例并纳入巡检套件
 - YAML 流式序列 `[a, b]` 中引用 `${变量}` 必须加引号（`[$.code, "${x}"]`），否则 `{` 会被误判为映射起点
 - 变量函数写作 `${函数(参数)}`（如 `${uuid()}`、`${rand_str(8)}`）；字符串参数需加引号；插件可用 `registry.register_function` 扩展
 - 子用例引用：步骤用 `use: 相对路径` 内联展开，共享父用例变量上下文（含 extract 结果）；仅内联步骤，忽略子用例的 config/hooks；已检测循环引用

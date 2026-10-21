@@ -246,7 +246,33 @@ teststeps:
 - 查询结果按行转换为字典列表，用 JSON 路径取值（`$[0].status`）
 - 命名参数用 `args`（如 `:uid`）；位置参数用 `params`（按数据库的占位符书写：SQLite 用 `?`，MySQL/PostgreSQL 用 `%s`）
 - 连接串：`sqlite:///demo.db`、`sqlite:///C:/abs/demo.db`、`mysql://user:pass@host:3306/db`、`postgresql://user:pass@host:5432/db`
+- sqlite 相对路径基于**用例所在目录**解析（与数据文件、子用例一致）
 - SQLite 内置零依赖；MySQL 需 `pip install -e ".[mysql]"`，PostgreSQL 需 `pip install -e ".[postgresql]"`
+- 演示数据：`python examples/prepare_demo_data.py`（生成 demo.db 与 login_data.xlsx）
+
+## 示例一览
+
+examples/ 按能力逐项演示，一条命令全部巡检：
+
+```bash
+atf run examples/feature_suite.yaml -e examples/configs/envs.yaml --env-name test
+```
+
+| 能力 | 示例文件 |
+|------|----------|
+| 基础流程 / 变量提取 / 报告脱敏 | `cases/user_flow.yaml` |
+| 数据驱动（CSV / Excel） | `cases/login_datas.yaml` · `cases/excel_datas.yaml` |
+| 多环境 profile | `configs/envs.yaml`（配合 `--env-name test`） |
+| 数据库断言 | `cases/db_check.yaml`（先跑 prepare_demo_data.py） |
+| 生命周期钩子 | `cases/hooks_demo.yaml` |
+| 插件（自定义比较符/提取器） | `cases/plugin_demo.yaml` |
+| 内置变量函数 | `cases/functions_demo.yaml` |
+| 断言增强 / JSON Schema | `cases/assertions_demo.yaml` · `cases/schema_demo.yaml` |
+| XPath 提取 | `cases/xpath_demo.yaml` |
+| 会话共享（登录一次全程携带） | `session_suite.yaml` |
+| 子用例引用 | `cases/use_demo.yaml` |
+| 套件 / 标签 / 并发 / 重试 | `smoke_suite.yaml`（命令见「用例组织与执行」） |
+| 失败分析 / AI 修补 | `analyze/fail_demo.yaml`（带 `--ai-analyze --ai-fix` 运行） |
 
 ## 钩子函数
 

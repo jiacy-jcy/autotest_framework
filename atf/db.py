@@ -13,6 +13,7 @@
 - postgresql://user:pass@host:5432/dbname
 """
 import json
+from pathlib import Path
 from urllib.parse import urlparse
 
 from .errors import ATFError
@@ -44,15 +45,15 @@ class QueryResult:
         return self.rows
 
 
-def query(config: dict) -> QueryResult:
-    """按步骤中的 db 配置执行查询，返回 QueryResult"""
+def query(config: dict, base_dir=None) -> QueryResult:
+    """按步骤中的 db 配置执行查询，返回 QueryResult（sqlite 相对路径基于 base_dir）"""
     url = config.get("url")
     sql = config.get("query")
     if not url:
         raise ATFError("数据库步骤缺少 url（连接串）")
     if not sql:
         raise ATFError("数据库步骤缺少 query（SQL 语句）")
-    connection = _connect(url)
+    connection = _connect(url, base_dir)
     try:
         cursor = connection.cursor()
         params = config.get("args") or config.get("params")
@@ -73,13 +74,13 @@ def query(config: dict) -> QueryResult:
         connection.close()
 
 
-def _connect(url: str):
+def _connect(url: str, base_dir=None):
     parsed = urlparse(url)
     scheme = parsed.scheme
     if scheme in _SQLITE_SCHEMES:
         import sqlite3
 
-        return sqlite3.connect(_sqlite_path(url))
+        return sqlite3.connect(_sqlite_path(url, base_dir))
     if scheme in _MYSQL_SCHEMES:
         try:
             import pymysql
@@ -108,10 +109,12 @@ def _connect(url: str):
     raise ATFError(f"不支持的数据库类型：{scheme}（支持 sqlite / mysql / postgresql）")
 
 
-def _sqlite_path(url: str) -> str:
+def _sqlite_path(url: str, base_dir=None) -> str:
     rest = url.split("://", 1)[1]
     if rest in (":memory:", "/:memory:"):
         return ":memory:"
-    if rest.startswith("//"):
-        return rest[1:]  # 绝对路径（Unix）
-    return rest[1:] if rest.startswith("/") else rest
+    path = rest[1:] if rest.startswith("/") else rest
+    # 相对路径基于用例所在目录解析，与数据文件/子用例的规则保持一致
+    if base_dir and not Path(path).is_absolute():
+        return str(Path(base_dir) / path)
+    return path
