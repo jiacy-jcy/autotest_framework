@@ -15,7 +15,9 @@ from .runner import Runner
 def pytest_addoption(parser):
     group = parser.getgroup("atf", "ATF 接口自动化")
     group.addoption("--atf-env", action="store", default=None, metavar="文件",
-                    help="ATF 环境变量配置文件（YAML 键值对），命名空间为 env")
+                    help="ATF 环境变量配置文件（YAML，支持 environments 多环境分区）")
+    group.addoption("--atf-env-name", action="store", default=None,
+                    help="多环境配置文件中选择的环境名（配合 --atf-env 使用）")
     group.addoption("--atf-timeout", action="store", type=float, default=30.0,
                     help="ATF 请求超时秒数（默认 30）")
     group.addoption("--atf-tags", action="store", default=None,
@@ -28,7 +30,7 @@ def pytest_configure(config):
     env_file = config.getoption("--atf-env")
     if env_file:
         try:
-            config._atf_env = load_env_file(env_file)
+            config._atf_env = load_env_file(env_file, name=config.getoption("--atf-env-name"))
         except CaseFormatError as exc:
             raise pytest.UsageError(str(exc)) from exc
     tags = config.getoption("--atf-tags")

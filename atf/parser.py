@@ -29,15 +29,41 @@ def load_case_file(path) -> dict:
     return data
 
 
-def load_env_file(path) -> dict:
-    """加载环境变量配置文件（扁平的 YAML 键值对）"""
+_RESERVED_ENV_KEYS = ("environments", "default")
+
+
+def load_env_file(path, name=None) -> dict:
+    """加载环境变量配置文件，支持两种写法：
+
+    - 扁平键值对（原有写法）：所有键直接作为变量
+    - 多环境分区：environments 下按名称分区，用 name 参数选择；
+      顶层其余键作为公共变量，分区中的同名键覆盖公共变量
+    """
     p = Path(path)
     if not p.exists():
         raise CaseFormatError(f"环境配置文件不存在：{p}")
     data = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
     if not isinstance(data, dict):
         raise CaseFormatError(f"环境配置文件 {p.name} 的内容必须是 YAML 键值对")
-    return data
+    environments = data.get("environments")
+    if not environments:
+        return data
+    if not isinstance(environments, dict):
+        raise CaseFormatError(f"环境配置文件 {p.name} 的 environments 必须是键值对")
+    available = "、".join(environments)
+    name = name or data.get("default")
+    if not name:
+        raise CaseFormatError(
+            f"环境配置文件 {p.name} 包含多个环境（{available}），"
+            f"请用 --env-name 指定，或在文件中用 default 声明默认环境"
+        )
+    chosen = environments.get(name)
+    if chosen is None:
+        raise CaseFormatError(f"环境 {name} 在 {p.name} 中不存在，可选：{available}")
+    if not isinstance(chosen, dict):
+        raise CaseFormatError(f"环境配置文件 {p.name} 中环境 {name} 的内容必须是键值对")
+    common = {key: value for key, value in data.items() if key not in _RESERVED_ENV_KEYS}
+    return {**common, **chosen}
 
 
 def find_case_files(path) -> list:

@@ -109,6 +109,19 @@ password: "123456"
 > 提示：`env` 与 `sys` 是保留的命名空间前缀。若个别变量名本身含点号
 > （如 `foo.bar`），只要 `foo` 不是 `env`/`sys` 就会按普通变量名整段查找。
 
+### 多环境分区
+
+`--env` 配置文件支持多环境分区，`--env-name` 一键切换：
+
+```yaml
+default: test                          # 缺省环境；也可命令行 --env-name prod 指定
+environments:
+  test: {base_url: http://test.x, username: admin}
+  prod: {base_url: http://prod.x, username: admin}
+```
+
+分区里的键覆盖顶层同名键，顶层其余键作为公共变量沿用；扁平写法（没有 `environments`）完全兼容。
+
 ### 内置变量函数
 
 变量位置可直接调用内置函数：
@@ -359,6 +372,7 @@ atf run cases -e config.yaml --allure                # 导出 allure-results/
 - **HTML 报告（默认）**：零依赖、单文件、全中文，双击即可查看；含汇总统计，逐步展示方法、接口、状态码与耗时，失败步骤自动展开请求体、响应体与失败原因
 - **Allure**：导出标准结果，供已有 Allure 的团队使用：`allure generate allure-results -o allure-report`
 - **脱敏**：`config.mask: [password, token]` 会在报告中对这些字段打码（仅影响报告，不影响真实请求）
+- **趋势**：`--trend` 把每次结果追加到 `reports/history.jsonl`，HTML 报告自动绘制通过率趋势（内联 SVG，仍是单文件）
 
 ## 在 pytest 中使用
 
@@ -380,10 +394,12 @@ pytest cases -k 登录                      # 用 -k 选择用例
 | 命令 | 说明 |
 |------|------|
 | `atf init [目录] [--force]` | 初始化示例项目（配置 + 用例 + 演示服务） |
-| `atf run <用例/目录/套件> [-e 环境配置.yaml] [--tags 标签] [-w 并发数] [--retry 次数] [--html 路径] [--allure 目录] [--ai-analyze] [--ai-fix]` | 执行用例（支持套件/标签/并发/重试与报告），全部通过退出码为 0 |
+| `atf run <用例/目录/套件> [-e 环境配置.yaml] [--env-name 环境名] [--tags 标签] [-w 并发数] [--retry 次数] [--html 路径] [--allure 目录] [--ai-analyze] [--ai-fix] [--trend]` | 执行用例（支持套件/标签/并发/重试与报告），全部通过退出码为 0 |
 | `atf gen <openapi.json 或 demo.har> [-o 输出目录] [--llm]` | 生成用例（文件类型自动识别） |
 | `atf gen --curl "<curl 命令或命令文件>" [-o 输出目录]` | curl 命令转用例 |
 | `atf --version` | 查看版本 |
+
+接入 CI/CD（GitHub Actions / Jenkins / GitLab CI 模板与建议）见 [docs/ci-cd.md](docs/ci-cd.md)。
 
 ## 路线图
 
@@ -395,7 +411,7 @@ pytest cases -k 登录                      # 用 -k 选择用例
 - [x] v0.6 复用度补强：套件级会话共享（登录一次全程携带）、子用例引用、内置变量函数（`${uuid()}` 等）、报告脱敏
 - [x] v0.7 断言与提取增强：JSON Schema 断言、类型/数组断言、XPath 提取器（可选依赖 `atf[html]`）
 - [x] v0.8 零代码生成生态：HAR / curl 一键转用例、OpenAPI 自动串联登录流、AI 修补建议
-- [ ] v0.9 企业落地：多环境 profile（dev/test/prod 一键切换）、报告趋势、CI/CD 示例
+- [x] v0.9 企业落地：多环境 profile（dev/test/prod 一键切换）、报告趋势、CI/CD 示例
 - [ ] v1.0 稳定与发布：改名发布 PyPI、插件生态文档、大规模并发验证
 
 > 说明：ATF 专注接口层测试，不内置浏览器自动化（Selenium/Playwright）；

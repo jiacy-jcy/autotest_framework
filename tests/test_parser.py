@@ -36,6 +36,38 @@ class TestParser(unittest.TestCase):
         path = self._write("env.yaml", "BASE_URL: http://x\npassword: '123'\n")
         self.assertEqual(load_env_file(path)["password"], "123")
 
+    def test_env_profiles_selected_by_name(self):
+        path = self._write("envs.yaml",
+                           "timeout: 30\n"
+                           "environments:\n"
+                           "  test: {base_url: http://test, timeout: 5}\n"
+                           "  prod: {base_url: http://prod}\n")
+        env = load_env_file(path, name="prod")
+        self.assertEqual(env, {"timeout": 30, "base_url": "http://prod"})  # 公共变量被分区覆盖
+        env = load_env_file(path, name="test")
+        self.assertEqual(env["timeout"], 5)
+
+    def test_env_profiles_default(self):
+        path = self._write("envs.yaml",
+                           "default: test\n"
+                           "environments:\n"
+                           "  test: {base_url: http://test}\n"
+                           "  prod: {base_url: http://prod}\n")
+        self.assertEqual(load_env_file(path)["base_url"], "http://test")
+
+    def test_env_profiles_missing_name_chinese_error(self):
+        path = self._write("envs.yaml", "environments:\n  test: {base_url: http://test}\n")
+        with self.assertRaises(CaseFormatError) as ctx:
+            load_env_file(path)
+        self.assertIn("--env-name", str(ctx.exception))
+        self.assertIn("test", str(ctx.exception))  # 报错要列出可选环境
+
+    def test_env_profiles_unknown_name_chinese_error(self):
+        path = self._write("envs.yaml", "environments:\n  test: {base_url: http://test}\n")
+        with self.assertRaises(CaseFormatError) as ctx:
+            load_env_file(path, name="prod")
+        self.assertIn("不存在", str(ctx.exception))
+
     def test_find_case_files_in_dir(self):
         self._write("a.yaml", "teststeps: []\n")
         self._write("b.yml", "teststeps: []\n")

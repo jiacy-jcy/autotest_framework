@@ -25,6 +25,7 @@ atf/            框架核心包
 ├── report.py     中文控制台报告
 ├── html_report.py 自研单文件 HTML 报告（零依赖、内联样式）
 ├── allure_report.py 导出 Allure 结果（allure-results）
+├── trend.py      报告趋势（reports/history.jsonl 累积，内联 SVG 绘图）
 ├── schema.py     JSON Schema 断言（可选依赖 atf[schema]，jsonschema）
 ├── html_extract.py XPath 提取器（可选依赖 atf[html]；以插件契约实现，兼作插件样板）
 ├── converters.py HAR/curl→用例零代码转换（静态过滤/去重/拆 base_url/还原请求体）
@@ -36,6 +37,7 @@ examples/       离线可跑的示例（mock_server + 用例 + openapi.json）
 tests/          框架自身测试（unittest，零额外依赖）
 pytest_tests/   pytest 插件测试（依赖 pytest，用 pytester 隔离运行）
 .github/        GitHub Actions CI（单元测试矩阵 + pytest 插件 + 端到端冒烟）
+docs/           CI/CD 集成指南等（docs/ci-cd.md）
 ```
 
 ## 常用命令
@@ -66,6 +68,7 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 - 内置扩展（如 html_extract）以插件契约 `register(registry)` 实现，与第三方插件同一套机制
 - 路线图更新必须三处同步：README「路线图」章节（勾选 `[x]`）、本文件主路线图列表（标注已完成+版本）、本文件「后续迭代规划」（移除已完成条目）
 - `atf gen` 输出命名：OpenAPI→`generated_cases.yaml`、HAR→`har_cases.yaml`、curl→`curl_cases.yaml`（同目录互不覆盖）
+- 趋势历史写在 HTML 报告同目录的 `history.jsonl`（默认 `reports/`，reports/ 已 ignore）；趋势图为内联 SVG，不引入外部 JS 资源
 - 修改本文件涉及的任何结构/命令/约定时，同步更新本文件
 
 ## 路线图（发布前检查项）
@@ -77,22 +80,19 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 - v0.6（已完成，0.6.0）：套件级会话共享（`session: shared`）、子用例引用（`use:`）、内置变量函数、报告脱敏（`config.mask`）
 - v0.7（已完成，0.7.0）：JSON Schema 断言（atf[schema]）、is_type/contains_any、XPath 提取器（atf[html]，插件契约样板）
 - v0.8（已完成，0.8.0）：HAR/curl 零代码转换、OpenAPI 自动串联登录流与枚举参数化、`--ai-fix` 修补建议
+- v0.9（已完成，0.9.0）：多环境 profile（`--env-name`）、报告趋势（`--trend` + history.jsonl）、CI/CD 集成指南（docs/ci-cd.md）
 - 插件契约：模块提供 `register(registry)`，用 `registry.register_comparator/register_extractor` 注册；同时支持 entry point 组 `atf.plugins`
 - 开发约定补充：pytest 插件测试放 `pytest_tests/`（用 pytester），勿放 `tests/`（后者由 unittest 收集，不依赖 pytest）
 - 钩子事件：before_case / after_case / before_step / after_step；钩子文件会自动从「当前目录 + 用例目录」导入
 - 发布 PyPI 前：确认包名可用并改名（pyproject.toml 中 `name`）
 - 已完成：GitHub Actions CI（`.github/workflows/test.yml`：Python 3.9–3.12 单测矩阵 + 端到端冒烟）
 
-### 后续迭代规划（v0.9 → v1.0）
+### 后续迭代规划（v1.0）
 
-总方向：**企业落地 → v1.0 稳定发布**（复用补强、断言增强、零代码生成已于 v0.6–v0.8 完成）。不内置浏览器自动化（UI 层留给插件生态）。
+总方向：**稳定与发布**（多环境、报告趋势与 CI/CD 集成已于 v0.9 完成）。不内置浏览器自动化（UI 层留给插件生态）。
 
-- v0.9 企业落地：
-  - 多环境 profile：config 内 dev/test/prod 分区，`--env-name` 切换
-  - 报告趋势：本地累积历史通过率，HTML 报告画趋势图
-  - CI/CD 示例：GitHub Actions / Jenkins / GitLab CI 文档与模板
 - v1.0 稳定与发布：
-  - 改名 + 发布 PyPI（建议在 v0.8 期间先发 0.x，`pip install -e .` 对普通用户是门槛，早发布早积累用户）
+  - 改名 + 发布 PyPI（`pip install -e .` 对普通用户是门槛，早发布早积累用户）
   - 插件生态：`atf.plugins` entry point 规范文档 + 官方示例插件
   - 规模验证：数千用例下 `-w` 并发与报告生成的性能
 
