@@ -16,7 +16,8 @@ def main(argv=None) -> int:
 
     p_run = sub.add_parser("run", help="执行 YAML 用例（支持单个文件或整个目录）")
     p_run.add_argument("case", help="用例文件或目录路径")
-    p_run.add_argument("-e", "--env", help="环境变量配置文件（YAML 键值对）")
+    p_run.add_argument("-e", "--env", help="环境变量配置文件（YAML 键值对，支持 environments 多环境分区）")
+    p_run.add_argument("--env-name", help="多环境配置文件中选择的环境名（配合 -e 使用）")
     p_run.add_argument("-t", "--timeout", type=float, default=30.0, help="请求超时秒数，默认 30")
     p_run.add_argument("--html", nargs="?", const="reports/atf-report.html", default=None,
                        help="生成 HTML 报告，可指定路径（默认 reports/atf-report.html）")
@@ -26,6 +27,8 @@ def main(argv=None) -> int:
                        help="失败时分析原因（配置 ATF_AI_API_KEY 则用大模型，否则给出规则判断）")
     p_run.add_argument("--ai-fix", action="store_true",
                        help="在失败分析基础上让大模型给出用例修补建议（需配置 ATF_AI_API_KEY）")
+    p_run.add_argument("--trend", action="store_true",
+                       help="记录本次结果到报告同目录的 history.jsonl，并在 HTML 报告中绘制通过率趋势")
     p_run.add_argument("--tags", help="仅运行包含指定标签的用例，多个用逗号分隔，如 smoke,login")
     p_run.add_argument("-w", "--workers", type=int, default=1, help="并发执行的用例数，默认 1（顺序执行）")
     p_run.add_argument("--retry", type=int, default=0, help="失败用例重试次数，默认 0")
@@ -63,7 +66,10 @@ def _cmd_run(args) -> int:
     from .report import print_suite, print_summary
     from .runner import Runner
 
-    env = load_env_file(args.env) if args.env else {}
+    if getattr(args, "env_name", None) and not args.env:
+        print("错误：--env-name 需要配合 -e/--env 指定配置文件", file=sys.stderr)
+        return 2
+    env = load_env_file(args.env, name=args.env_name) if args.env else {}
     tag_filter = _parse_tags(getattr(args, "tags", None))
 
     cases = []
@@ -89,10 +95,20 @@ def _cmd_run(args) -> int:
         analyses = analyze_failures(suites, suggest_fix=bool(getattr(args, "ai_fix", False)))
         print_analysis(analyses)
 
+    trend = None
+    if getattr(args, "trend", False):
+        from .trend import load_history, record
+
+        report_target = _resolve_report_path(args.html or "reports/atf-report.html")
+        history = report_target.parent / "history.jsonl"
+        record(suites, history)
+        if args.html:
+            trend = load_history(history)
+
     if args.html:
         from .html_report import write_html_report
 
-        path = write_html_report(suites, args.html, analyses=analyses)
+        path = write_html_report(suites, args.html, analyses=analyses, trend=trend)
         print(f"HTML 报告已生成：{Path(path).resolve()}")
     if args.allure:
         from .allure_report import write_allure_results
@@ -101,6 +117,14 @@ def _cmd_run(args) -> int:
         print(f"Allure 结果已导出：{Path(path).resolve()}"
               f"（可执行 allure generate {path} -o allure-report 生成 HTML 报告）")
     return 0 if all_passed else 1
+
+
+def _resolve_report_path(path) -> Path:
+    """与 html_report 同规则解析报告最终路径（无 .html 后缀视为目录）"""
+    target = Path(path)
+    if target.suffix.lower() not in (".html", ".htm"):
+        target = target / "atf-report.html"
+    return target
 
 
 def _parse_tags(value) -> set:

@@ -6,6 +6,8 @@ import html
 from datetime import datetime
 from pathlib import Path
 
+from .trend import trend_svg
+
 _CSS = """
 * { box-sizing: border-box; }
 body { margin: 0; background: #f5f7fa; color: #1f2733;
@@ -41,6 +43,9 @@ th { color: #6b7686; font-weight: 600; font-size: 12px; background: #fafbfc; }
 pre { margin: 0; background: #1f2733; color: #e6edf3; padding: 12px 14px; border-radius: 8px;
   overflow: auto; font-size: 12px; line-height: 1.5; max-height: 320px; white-space: pre-wrap; word-break: break-all; }
 .error { color: #c0392b; background: #fdecea; padding: 10px 12px; border-radius: 8px; font-size: 13px; margin-top: 8px; }
+.axis { font-size: 10px; fill: #8a94a3; }
+.label { font-size: 12px; fill: #3b6fd4; }
+.trend-note { color: #8a94a3; font-size: 12px; margin: 4px 0; }
 .analysis { background: #fff; border-radius: 10px; padding: 16px 18px; margin-bottom: 20px;
   box-shadow: 0 1px 3px rgba(0,0,0,.06); border-left: 4px solid #7b61ff; }
 .analysis h2 { margin: 0 0 8px; font-size: 16px; }
@@ -60,17 +65,18 @@ _CATEGORY_CLASS = {
 }
 
 
-def write_html_report(suites: list, path="reports/atf-report.html", analyses: list = None) -> Path:
-    """生成 HTML 报告文件，返回文件路径。analyses 为失败分析结果（可选）"""
+def write_html_report(suites: list, path="reports/atf-report.html", analyses: list = None,
+                      trend: list = None) -> Path:
+    """生成 HTML 报告文件，返回文件路径。analyses 为失败分析，trend 为历史记录（可选）"""
     target = Path(path)
     if target.suffix.lower() not in (".html", ".htm"):
         target = target / "atf-report.html"
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(_render(suites, analyses), encoding="utf-8")
+    target.write_text(_render(suites, analyses, trend), encoding="utf-8")
     return target
 
 
-def _render(suites: list, analyses: list = None) -> str:
+def _render(suites: list, analyses: list = None, trend: list = None) -> str:
     stats = _stats(suites)
     cards = "\n".join(_suite_card(suite) for suite in suites) or '<p>没有可展示的用例。</p>'
     return (
@@ -79,9 +85,18 @@ def _render(suites: list, analyses: list = None) -> str:
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         "<title>ATF 智测 · 测试报告</title>\n"
         f"<style>{_CSS}</style>\n</head>\n<body>\n<div class=\"container\">\n"
-        f"{_header()}\n{_summary(stats)}\n{_analysis_section(analyses)}\n{cards}\n{_footer()}\n"
+        f"{_header()}\n{_summary(stats)}\n{_trend_section(trend)}\n"
+        f"{_analysis_section(analyses)}\n{cards}\n{_footer()}\n"
         "</div>\n</body>\n</html>\n"
     )
+
+
+def _trend_section(records) -> str:
+    if not records:
+        return ""
+    return ('<section class="suite"><div class="suite-head"><h2>'
+            f"通过率趋势（最近 {len(records)} 次）</h2></div>"
+            '<div style="padding: 8px 18px 12px">' + trend_svg(records) + "</div></section>")
 
 
 def _analysis_section(analyses: list) -> str:
