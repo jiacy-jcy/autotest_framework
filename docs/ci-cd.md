@@ -8,10 +8,12 @@ ATF 是纯 CLI 工具，接入任何流水线只需要三步：装好、跑 `atf
 | 1 | 存在失败（或被跳过的步骤） |
 | 2 | 用法错误（文件不存在、配置有误等） |
 
-安装建议：PyPI 包发布前，先从 Git 安装（下方示例均如此，发布后替换为 `pip install atf` 即可）：
+安装方式（本框架保持源码分发，不发布 PyPI）：
 
 ```bash
 pip install git+https://github.com/jiacy-jcy/autotest_framework.git
+# 需要可选依赖（如 Schema 断言、XPath 提取）时：
+pip install "atf[schema,html] @ git+https://github.com/jiacy-jcy/autotest_framework.git"
 ```
 
 ## GitHub Actions

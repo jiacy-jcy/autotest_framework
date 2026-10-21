@@ -19,13 +19,13 @@
 - **可扩展**：插件机制可注册自定义比较符与提取器
 - **执行增强**：套件编排、标签选择、并发执行（`-w`）、失败重试（`--retry`）
 - **测试报告**：`--html` 零依赖单文件 HTML 报告，`--allure` 导出 Allure 结果
-- **pytest 集成**：`pip install atf[pytest]` 后，YAML 用例可直接在 pytest 中运行
+- **pytest 集成**：`pip install -e ".[pytest]"` 后，YAML 用例可直接在 pytest 中运行
 - **开箱即用**：`atf init` 一键生成项目，自带离线演示服务，5 分钟跑通
 
 ## 快速开始
 
 ```bash
-pip install -e .                     # 安装（发布后改为 pip install atf）
+pip install -e .                     # 源码安装（本框架保持源码分发，不发布 PyPI）
 atf init myproject                   # 初始化示例项目（生成配置、用例、演示服务）
 cd myproject
 python mock_server.py                # 终端①：启动本地演示接口（端口 8899）
@@ -76,8 +76,8 @@ teststeps:
 
 - **类型断言**：`- is_type: ["$.data.id", int]`（别名 `类型为`；支持 str/int/float/number/bool/list/dict/null 及中文写法）
 - **数组包含**：`- contains_any: ["$.data.role", [admin, dev]]`（别名 `包含其一`；兼容 标量∈数组、数组含标量）
-- **JSON Schema**：`- schema: ["$.data", "schemas/user.json"]`——文件路径相对用例目录，也可直接内联 `{type: object}`（别名 `符合模式`；需 `pip install atf[schema]`）
-- **XPath 提取**（HTML 响应）：`extract: {title: "xpath://h1", id: "xpath://p/@id"}`（需 `pip install atf[html]`；以插件机制实现，可作插件样板）
+- **JSON Schema**：`- schema: ["$.data", "schemas/user.json"]`——文件路径相对用例目录，也可直接内联 `{type: object}`（别名 `符合模式`；需 `pip install -e ".[schema]"`）
+- **XPath 提取**（HTML 响应）：`extract: {title: "xpath://h1", id: "xpath://p/@id"}`（需 `pip install -e ".[html]"`；以插件机制实现，可作插件样板）
 
 断言支持第三参数自定义提示：`- eq: [$.code, 0, 登录应成功]`。
 
@@ -164,7 +164,7 @@ case_name,username,password,expect_code
 - 列名即变量名，可直接在用例中以 `${列名}` 引用
 - 可选列 `case_name`（或 `用例名`）用于区分每次执行的名称
 - 数据值统一按字符串处理；断言 `eq` / `ne` 会做字符串回退（`1001` 与 `"1001"` 视为相等）
-- Excel（`.xlsx`）需安装：`pip install atf[excel]`
+- Excel（`.xlsx`）需安装：`pip install -e ".[excel]"`
 - 在 pytest 中，每一行数据会被参数化为一个独立的用例
 
 > 小贴士：在 YAML 的**流式序列**（`[a, b]`）中引用 `${变量}` 时，`{` 会被误认为映射起点，
@@ -246,7 +246,7 @@ teststeps:
 - 查询结果按行转换为字典列表，用 JSON 路径取值（`$[0].status`）
 - 命名参数用 `args`（如 `:uid`）；位置参数用 `params`（按数据库的占位符书写：SQLite 用 `?`，MySQL/PostgreSQL 用 `%s`）
 - 连接串：`sqlite:///demo.db`、`sqlite:///C:/abs/demo.db`、`mysql://user:pass@host:3306/db`、`postgresql://user:pass@host:5432/db`
-- SQLite 内置零依赖；MySQL 需 `pip install atf[mysql]`，PostgreSQL 需 `pip install atf[postgresql]`
+- SQLite 内置零依赖；MySQL 需 `pip install -e ".[mysql]"`，PostgreSQL 需 `pip install -e ".[postgresql]"`
 
 ## 钩子函数
 
@@ -380,7 +380,7 @@ atf run cases -e config.yaml --allure                # 导出 allure-results/
 带有 `teststeps` 的 YAML 会被收集为 pytest 用例，从而复用 pytest 的 `-k` 选择、报告与 CI 生态：
 
 ```bash
-pip install atf[pytest]
+pip install -e ".[pytest]"
 pytest cases -v --atf-env config.yaml   # 像跑普通测试一样运行 ATF 用例
 pytest cases -k 登录                      # 用 -k 选择用例
 ```
@@ -412,7 +412,7 @@ pytest cases -k 登录                      # 用 -k 选择用例
 - [x] v0.7 断言与提取增强：JSON Schema 断言、类型/数组断言、XPath 提取器（可选依赖 `atf[html]`）
 - [x] v0.8 零代码生成生态：HAR / curl 一键转用例、OpenAPI 自动串联登录流、AI 修补建议
 - [x] v0.9 企业落地：多环境 profile（dev/test/prod 一键切换）、报告趋势、CI/CD 示例
-- [ ] v1.0 稳定与发布：改名发布 PyPI、插件生态文档、大规模并发验证
+- [ ] v1.0 稳定与收敛：插件生态规范文档与官方示例插件、大规模并发验证（分发保持源码模式）
 
 > 说明：ATF 专注接口层测试，不内置浏览器自动化（Selenium/Playwright）；
 > UI 层建议搭配 Playwright 分层使用（参见后续《ATF + Playwright 分层实践》文档）。
