@@ -84,20 +84,21 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 - 插件契约：模块提供 `register(registry)`，用 `registry.register_comparator/register_extractor` 注册；同时支持 entry point 组 `atf.plugins`
 - 开发约定补充：pytest 插件测试放 `pytest_tests/`（用 pytester），勿放 `tests/`（后者由 unittest 收集，不依赖 pytest）
 - 钩子事件：before_case / after_case / before_step / after_step；钩子文件会自动从「当前目录 + 用例目录」导入
-- 发布 PyPI 前：确认包名可用并改名（pyproject.toml 中 `name`）
+- 分发决策（2026-10）：保持源码模式，**不发布 PyPI**；pyproject 的 `name` 仅作本地包标识，无需改名；README 的安装说明统一为源码安装（`pip install -e ".[extra]"`）
 - 已完成：GitHub Actions CI（`.github/workflows/test.yml`：Python 3.9–3.12 单测矩阵 + 端到端冒烟）
 
 ### 后续迭代规划（v1.0）
 
 总方向：**稳定与发布**（多环境、报告趋势与 CI/CD 集成已于 v0.9 完成）。不内置浏览器自动化（UI 层留给插件生态）。
 
-- v1.0 稳定与发布：
-  - 改名 + 发布 PyPI（`pip install -e .` 对普通用户是门槛，早发布早积累用户）
+- v1.0 稳定与收敛：
   - 插件生态：`atf.plugins` entry point 规范文档 + 官方示例插件
   - 规模验证：数千用例下 `-w` 并发与报告生成的性能
+  - （分发保持源码模式，不发布 PyPI）
 
 ### 关键决策
 
 - **UI 层不内置**：不引入 Selenium/Playwright，另写《ATF + Playwright 分层实践》文档引导组合使用，保持「AI + 中文 + 极简依赖」定位
 - **依赖约束延续**：新能力一律走可选依赖（`atf[excel]` 模式），核心保持 httpx + PyYAML
+- **分发方式**：保持源码模式（git 安装 / `pip install -e .`），不发布 PyPI；推广与文档中的安装说明统一用源码写法
 - HAR/curl 生成与子用例引用需同步在 `pytest_tests/` 补 pytest 插件侧行为验证
