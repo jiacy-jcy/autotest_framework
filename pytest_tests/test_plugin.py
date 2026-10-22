@@ -108,3 +108,71 @@ def test_data_driven_parametrization(pytester, mock_server):
     result = pytester.runpytest("-v")
     result.assert_outcomes(passed=2)  # 两行数据参数化为两个用例
     result.stdout.fnmatch_lines(["*正确登录*", "*密码错误*"])
+
+
+def test_use_reference_runs_in_pytest(pytester):
+    pytester.makefile(".yaml", common=textwrap.dedent("""
+        config:
+          name: 前置
+        teststeps:
+          - name: 取值
+            db:
+              url: "sqlite:///:memory:"
+              query: "SELECT 42 AS n"
+            extract:
+              n: "$[0].n"
+    """))
+    pytester.makefile(".yaml", main=textwrap.dedent("""
+        config:
+          name: 主用例
+        teststeps:
+          - use: common.yaml
+          - name: 校验
+            db:
+              url: "sqlite:///:memory:"
+              query: "SELECT 1 AS x"
+            validate:
+              - eq: ["${n}", 42]
+    """))
+    result = pytester.runpytest("-v")
+    result.assert_outcomes(passed=2)  # 子用例文件本身也是合法用例，两份都会收集执行
+    result.stdout.fnmatch_lines(["*前置*", "*主用例*"])
+
+
+def test_atf_env_name_selects_profile(pytester):
+    pytester.makefile(".yaml", envs=textwrap.dedent("""
+        default: test
+        environments:
+          test: {marker: 通过值}
+          prod: {marker: 不该看到}
+    """))
+    pytester.makefile(".yaml", case=textwrap.dedent("""
+        config:
+          name: 环境用例
+        teststeps:
+          - name: 查询
+            db:
+              url: "sqlite:///:memory:"
+              query: "SELECT '通过值' AS v"
+            validate:
+              - eq: ["$[0].v", "${env.marker}"]
+    """))
+    selected = pytester.runpytest("--atf-env", "envs.yaml", "--atf-env-name", "test")
+    selected.assert_outcomes(passed=1)
+    wrong = pytester.runpytest("--atf-env", "envs.yaml", "--atf-env-name", "prod")
+    wrong.assert_outcomes(failed=1)
+
+
+def test_har_generated_case_is_collectable(pytester):
+    import json
+
+    from atf.converters import generate_from_har
+
+    har = {"log": {"entries": [{"_resourceType": "xhr",
+                    "request": {"method": "GET", "url": "https://demo.local/api/ping",
+                                "headers": []}}]}}
+    har_path = pytester.path / "demo.har"
+    har_path.write_text(json.dumps(har), encoding="utf-8")
+    generate_from_har(str(har_path), str(pytester.path))
+    result = pytester.runpytest("--collect-only")
+    assert "collected 1 item" in result.stdout.str()

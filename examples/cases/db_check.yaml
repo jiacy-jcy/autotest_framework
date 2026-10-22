@@ -1,4 +1,4 @@
-# 数据库断言示例：先执行 python examples/make_sqlite_db.py 生成 demo.db
+# 数据库断言示例：数据文件由 python examples/prepare_demo_data.py 生成（在 examples/ 下）
 config:
   name: 数据库断言示例
   tags: [db]
@@ -6,7 +6,7 @@ config:
 teststeps:
   - name: 查询用户状态
     db:
-      url: sqlite:///demo.db          # 相对当前工作目录；绝对路径写作 sqlite:///C:/path/demo.db
+      url: sqlite:///../demo.db       # 相对用例所在目录（../ 即 examples/）；绝对路径写作 sqlite:///C:/path/demo.db
       query: "SELECT id, name, status FROM users WHERE id = :uid"
       args:
         uid: 1

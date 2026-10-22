@@ -88,5 +88,5 @@ jobs:
 
       - name: 数据库断言冒烟
         run: |
-          python examples/make_sqlite_db.py
+          python examples/prepare_demo_data.py
           atf run examples/cases/db_check.yaml

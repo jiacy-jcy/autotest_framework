@@ -11,6 +11,10 @@ reports/
 allure-results/
 allure-report/
 
+# 演示数据（由 examples/prepare_demo_data.py 生成）
+examples/demo.db
+examples/cases/login_data.xlsx
+
 # IDE
 .idea/
 .vscode/

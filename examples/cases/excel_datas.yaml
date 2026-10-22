@@ -1,0 +1,20 @@
+# Excel 数据驱动示例：同一用例按 login_data.xlsx 每行分别执行
+# 数据文件由 python examples/prepare_demo_data.py 生成（需 openpyxl）
+config:
+  name: 登录参数化（Excel）
+  base_url: ${env.base_url}
+  tags: [data, excel]
+  datas: login_data.xlsx
+
+teststeps:
+  - name: 登录
+    request:
+      method: POST
+      url: /api/login
+      json:
+        username: ${username}
+        password: ${password}
+    validate:
+      - eq: [status_code, 200]
+      - eq: [$.code, "${expect_code}"]
+      - contains: [$.msg, "${expect_msg}"]

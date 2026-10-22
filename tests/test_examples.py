@@ -2,6 +2,8 @@
 import unittest
 from pathlib import Path
 
+import yaml
+
 from atf.parser import load_case_file
 
 EXAMPLES_DIR = Path(__file__).resolve().parent.parent / "examples" / "cases"
@@ -14,6 +16,15 @@ class TestExamples(unittest.TestCase):
         for file in files:
             with self.subTest(case=file.name):
                 case = load_case_file(file)
+                self.assertTrue(case["teststeps"])
+
+    def test_feature_suite_targets_exist_and_load(self):
+        suite_path = EXAMPLES_DIR.parent / "feature_suite.yaml"
+        suite = yaml.safe_load(suite_path.read_text(encoding="utf-8"))
+        self.assertTrue(suite["cases"], "特性巡检套件应引用用例")
+        for relative in suite["cases"]:
+            with self.subTest(case=relative):
+                case = load_case_file(EXAMPLES_DIR.parent / relative)
                 self.assertTrue(case["teststeps"])
 
 

@@ -310,7 +310,7 @@ class Runner:
             raise CaseFormatError(f"步骤「{step['name']}」的 db 必须是键值对")
         detail.method = "DB"
         detail.url = str(db_config.get("query", ""))
-        result = query(db_config)
+        result = query(db_config, base_dir=getattr(variables, "case_dir", None))
         detail.response_body = mask_text(result.text, mask_keys(config))
         self._post_process(result, step, variables)
 
