@@ -84,20 +84,20 @@ python -m venv .venv && .venv\Scripts\pip install -e .   # 环境搭建
 - v0.7（已完成，0.7.0）：JSON Schema 断言（atf[schema]）、is_type/contains_any、XPath 提取器（atf[html]，插件契约样板）
 - v0.8（已完成，0.8.0）：HAR/curl 零代码转换、OpenAPI 自动串联登录流与枚举参数化、`--ai-fix` 修补建议
 - v0.9（已完成，0.9.0）：多环境 profile（`--env-name`）、报告趋势（`--trend` + history.jsonl）、CI/CD 集成指南（docs/ci-cd.md）
+- v1.0（已完成，1.0.0）：能力示例全量补齐与特性巡检套件、CLI 集成测试、相对路径语义统一；代码版本号已与 tag 对齐
 - 插件契约：模块提供 `register(registry)`，用 `registry.register_comparator/register_extractor` 注册；同时支持 entry point 组 `atf.plugins`
 - 开发约定补充：pytest 插件测试放 `pytest_tests/`（用 pytester），勿放 `tests/`（后者由 unittest 收集，不依赖 pytest）
 - 钩子事件：before_case / after_case / before_step / after_step；钩子文件会自动从「当前目录 + 用例目录」导入
 - 分发决策（2026-10）：保持源码模式，**不发布 PyPI**；pyproject 的 `name` 仅作本地包标识，无需改名；README 的安装说明统一为源码安装（`pip install -e ".[extra]"`）
 - 已完成：GitHub Actions CI（`.github/workflows/test.yml`：Python 3.9–3.12 单测矩阵 + 端到端冒烟）
 
-### 后续迭代规划（v1.0）
+### 1.0 之后的迭代规划（按用户反馈择机启动）
 
-总方向：**稳定与发布**（多环境、报告趋势与 CI/CD 集成已于 v0.9 完成）。不内置浏览器自动化（UI 层留给插件生态）。
+总方向：**稳定维护**，不预设大版本。1.0 已发布的框架进入稳定期，功能演进以真实使用反馈为准，不内置浏览器自动化（UI 层留给插件生态）。
 
-- v1.0 稳定与收敛：
-  - 插件生态：`atf.plugins` entry point 规范文档 + 官方示例插件
-  - 规模验证：数千用例下 `-w` 并发与报告生成的性能
-  - （分发保持源码模式，不发布 PyPI）
+候选（均为增强，非计划内交付）：
+- 插件生态：`atf.plugins` entry point 规范文档 + 官方示例插件（作为示范工程单独成库，不动本仓库依赖）
+- 规模验证：数千用例下 `-w` 并发与报告生成的性能实测（产出数据再决定是否优化）
 
 ### 关键决策
 

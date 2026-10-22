@@ -438,7 +438,8 @@ pytest cases -k 登录                      # 用 -k 选择用例
 - [x] v0.7 断言与提取增强：JSON Schema 断言、类型/数组断言、XPath 提取器（可选依赖 `atf[html]`）
 - [x] v0.8 零代码生成生态：HAR / curl 一键转用例、OpenAPI 自动串联登录流、AI 修补建议
 - [x] v0.9 企业落地：多环境 profile（dev/test/prod 一键切换）、报告趋势、CI/CD 示例
-- [ ] v1.0 稳定与收敛：插件生态规范文档与官方示例插件、大规模并发验证（分发保持源码模式）
+- [x] v1.0 稳定与收敛（源码分发稳定期）：能力示例全量补齐、CLI 集成测试、相对路径语义统一、特性巡检套件
+- （1.0 之后按用户反馈迭代，候选方向见 AGENTS.md：插件生态规范文档、大规模并发验证）
 
 > 说明：ATF 专注接口层测试，不内置浏览器自动化（Selenium/Playwright）；
 > UI 层建议搭配 Playwright 分层使用（参见后续《ATF + Playwright 分层实践》文档）。
